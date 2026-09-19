@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>栄養・食事管理</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div id="errbar" hidden></div>
+<div id="layout">
+  <nav id="nav" class="no-print"></nav>
+  <main id="root"></main>
+</div>
+<div id="toast" hidden></div>
+
+<!-- 基盤 -->
+<script src="js/util.js"></script>
+<script src="js/model.js"></script>
+<script src="js/db.js"></script>
+<script src="js/master.js"></script>
+<script src="js/view.js"></script>
+<script src="js/app.js"></script>
+
+<!-- 機能モジュール（それぞれ独立。scriptタグを外せばその機能だけ消える。residents は他が頼るので残す） -->
+<script src="modules/residents.js"></script>
+<script src="modules/census.js"></script>
+<script src="modules/home.js"></script>
+<script src="modules/cards.js"></script>
+<script src="modules/weights.js"></script>
+<script src="modules/rounds.js"></script>
+<script src="modules/settings.js"></script>
+
+<!-- 開発用（削除可能）: このscriptタグと modules/devtools.js を消せば本番構成。?demo と ?selftest が使えなくなるだけ -->
+<script src="modules/devtools.js"></script>
+
+<script>App.start();</script>
+</body>
+</html>
