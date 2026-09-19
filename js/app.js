@@ -46,9 +46,11 @@
     const bar = document.getElementById('nav');
     bar.innerHTML = '';
     bar.appendChild(h('div', { class: 'nav-title' }, '栄養・食事管理'));
-    App.nav.forEach((t) => {
+    const prof = window.Master.current.profile;
+    App.nav.filter((t) => window.Profile.enabled(prof, t.feature)).forEach((t) => {
       const on = t.match.indexOf(current) >= 0;
-      bar.appendChild(h('a', { href: t.hash, class: 'nav-item' + (on ? ' on' : '') }, h('span', { class: 'nav-icon' }, t.icon), h('span', null, t.label)));
+      const label = typeof t.label === 'function' ? t.label() : t.label;
+      bar.appendChild(h('a', { href: t.hash, class: 'nav-item' + (on ? ' on' : '') }, h('span', { class: 'nav-icon' }, t.icon), h('span', null, label)));
     });
     if (/eiyo_kanri_demo/.test(window.DB.name)) bar.appendChild(h('div', { class: 'nav-note' }, '見本データで表示中（本番のデータとは別）'));
   }

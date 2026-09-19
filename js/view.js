@@ -5,6 +5,12 @@
   const V = {};
   const ms = () => window.Master.current;
 
+  // 呼び方（事業所プロファイル）。person=利用者/入居者/患者/園児, suffix=様/ちゃん, place=ユニット, admit=入所, leave=退所
+  const FALLBACK = { person: '利用者', suffix: '様', place: 'ユニット・フロア', admit: '入所', leave: '退所' };
+  V.t = function (key) { const m = window.Master.current, p = m && m.profile; return (p && p.terms && p.terms[key]) || FALLBACK[key] || ''; };
+  V.sama = function (name) { return name + ' ' + V.t('suffix'); };
+  V.stayInCats = function () { return ms().categories.filter((c) => c.stayIn !== false).map((c) => c.id); };
+
   V.STATUS = { in: { label: '在籍中', cls: 'ok' }, planned: { label: '予定あり', cls: 'info' }, rest: { label: '休止中', cls: 'mute' } };
   V.statusBadge = (st) => h('span', { class: 'badge ' + V.STATUS[st].cls }, V.STATUS[st].label);
   V.slotText = function (p, tail) { return p ? U.fmtDate(p.d) + (p.m ? ' ' + M.label(ms().meals, p.m) + (tail || '') : '') : '未定'; };

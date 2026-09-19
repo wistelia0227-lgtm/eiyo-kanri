@@ -22,7 +22,7 @@
         staple: staple.value === '' ? null : Number(staple.value), side: side.value === '' ? null : Number(side.value), note: note.value.trim(), by: V.recorder(), recordedAt: Date.now() });
       close(); App.refresh();
     };
-    close = U.modal(h('div', null, h('h2', null, r.name + ' 様　' + U.fmtDate(date) + ' のミールラウンド'),
+    close = U.modal(h('div', null, h('h2', null, V.sama(r.name) + '　' + U.fmtDate(date) + ' のミールラウンド'),
       h('div', { class: 'grid3' }, U.field('食事', meal), U.field('主食の摂取', staple), U.field('副食の摂取', side)),
       U.field('メモ（書くと ◎ になります）', note),
       h('div', { class: 'modal-btns' }, rec ? h('button', { class: 'btn danger-outline', onclick: () => save(null) }, '記録を消す') : null,
@@ -33,7 +33,8 @@
     const m = ms(), today = U.today(), month = params[0] || today.slice(0, 7);
     const first = month + '-01', last = M.addDays(M.addMonths(first, 1), -1);
     const days = []; for (let d = first; d <= last; d = M.addDays(d, 1)) days.push(d);
-    const residents = (await DB.residents()).filter((r) => !r.archived && r.category !== 'day' &&
+    const stayIn = V.stayInCats();
+    const residents = (await DB.residents()).filter((r) => !r.archived && stayIn.indexOf(r.category) >= 0 &&
       days.some((d) => M.activeMeals(m).some((ml) => M.presence(r, { d: d, m: ml.id }, m.meals).state !== 'out')))
       .sort((a, b) => (a.unit + a.room).localeCompare(b.unit + b.room, 'ja') || (a.kana || a.name).localeCompare(b.kana || b.name, 'ja'));
     const recs = {}; (await DB.getAll('rounds')).forEach((x) => { recs[x.id] = x; });
@@ -80,10 +81,11 @@
   App.registerTodo(async function (ctx) {
     const ws = weekStart(ctx.today), recs = {};
     (await DB.getAll('rounds')).forEach((x) => { if (x.date >= ws) recs[x.residentId] = (recs[x.residentId] || 0) + 1; });
-    const target = ctx.residents.filter((r) => r._st === 'in' && r.category === 'long');
+    const stayIn = V.stayInCats();
+    const target = ctx.residents.filter((r) => r._st === 'in' && stayIn.indexOf(r.category) >= 0);
     const few = target.filter((r) => (recs[r.id] || 0) < 3);
-    return (target.length && few.length) ? [{ level: 'info', text: '今週のミールラウンドが 3 回未満の人: ' + few.length + '人（入所 ' + target.length + '人中）', href: '#/rounds' }] : [];
+    return (target.length && few.length) ? [{ level: 'info', text: '今週のミールラウンドが 3 回未満の人: ' + few.length + '人（対象 ' + target.length + '人中）', href: '#/rounds' }] : [];
   });
 
-  App.registerNav({ order: 60, label: 'ラウンド', icon: '👀', hash: '#/rounds', match: ['rounds'] });
+  App.registerNav({ order: 60, feature: 'rounds', label: 'ラウンド', icon: '👀', hash: '#/rounds', match: ['rounds'] });
 })();

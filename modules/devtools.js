@@ -10,6 +10,7 @@
     const today = U.today(), now = Date.now(), day = (k) => M.addDays(today, k);
     const m = window.Master.current;
     m.facility = { name: '見本の里', recorder: '栄養 花子' }; m.units = ['さくら', 'もみじ', 'ショート'];
+    m.profile = window.Profile.normalize({ kinds: ['tokuyo', 'short'], supply: 'contract', dietitians: 1, addons: ['genzan', 'kyoka', 'ryoyo'], setupDone: true });
     m.extraRows.forEach((er) => { er.def = er.id === 'staff' ? { l: 8 } : er.id === 'kenshoku' ? { b: 1, l: 1, d: 1 } : {}; });
     await window.Master.save();
     const D = (o) => Object.assign(M.emptyDiet(), o);
@@ -80,6 +81,19 @@
     ok('バックアップから戻すと同じ人数・同じ測定数', (await DB.getAll('residents')).length === 8 && (await DB.getAll('measures')).length === dump.stores.measures.length);
     let refused = false; try { await DB.importAll({ app: 'other' }); } catch (e) { refused = true; }
     ok('別アプリのファイルは断る', refused);
+    // 事業所プロファイル: 機能を切るとメニューから消える
+    const prof = window.Master.current.profile;
+    ok('見本の事業所は特養＋ショート', prof.kinds.join(',') === 'tokuyo,short' && prof.setupDone);
+    ok('呼び方が入居者になっている', window.View.t('person') === '入居者');
+    ok('強化加算あり → ミールラウンドが有効', prof.features.rounds === true);
+    const navNames = () => { App.screens.home && 0; const bar = document.getElementById('nav'); return bar ? bar.textContent : ''; };
+    prof.features.cards = false; await window.Master.save();
+    document.getElementById('nav').innerHTML = '';
+    await App.screens.home([], h('div'));
+    ok('機能を切っても画面の関数は残る（直接開けば動く）', typeof App.screens.cards === 'function');
+    ok('切った機能はメニューに出ない', !window.Profile.enabled(prof, 'cards'), navNames());
+    prof.features.cards = true; await window.Master.save();
+
     // 全画面が例外なく描ける
     for (const name of Object.keys(App.screens)) {
       const box = h('div'); let err = null;

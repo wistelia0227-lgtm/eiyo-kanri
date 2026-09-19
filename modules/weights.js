@@ -29,7 +29,7 @@
 
   App.registerScreen('weights', async function (params, root) {
     const m = ms(), date = params[0] || U.today(), month = date.slice(0, 7);
-    const residents = (await DB.residents()).filter((r) => !r.archived && M.status(r, date, m.meals) === 'in' && r.category !== 'day')
+    const residents = (await DB.residents()).filter((r) => !r.archived && M.status(r, date, m.meals) === 'in')
       .sort((a, b) => (a.unit + a.room).localeCompare(b.unit + b.room, 'ja') || (a.kana || a.name).localeCompare(b.kana || b.name, 'ja'));
     const all = await W.byResident();
     const doneThisMonth = (r) => (all[r.id] || []).some((w) => w.date.slice(0, 7) === month);
@@ -99,7 +99,7 @@
 
   App.registerTodo(async function (ctx) {
     const all = await W.byResident(), month = ctx.today.slice(0, 7), out = [];
-    const target = ctx.residents.filter((r) => r._st === 'in' && r.category !== 'day');
+    const target = ctx.residents.filter((r) => r._st === 'in');
     const missing = target.filter((r) => !(all[r.id] || []).some((w) => w.date.slice(0, 7) === month));
     if (missing.length && target.length) out.push({ level: 'info', text: '今月の体重がまだの人: ' + missing.length + '人', href: '#/weights' });
     const high = target.filter((r) => W.evaluate(r, all[r.id], ctx.today).risk.level === 'high');
@@ -107,6 +107,6 @@
     return out;
   });
 
-  App.registerNav({ order: 50, label: '体重', icon: '⚖️', hash: '#/weights', match: ['weights'] });
+  App.registerNav({ order: 50, feature: 'weights', label: '体重', icon: '⚖️', hash: '#/weights', match: ['weights'] });
   window.Weights = W;
 })();

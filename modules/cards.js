@@ -103,5 +103,5 @@
       h('table', { class: 'list' }, h('tbody', null, Object.keys(byFood).sort((a, b) => a.localeCompare(b, 'ja')).map((f) => h('tr', null, h('th', null, f), h('td', null, byFood[f].length + '人'), h('td', null, byFood[f].join('、'))))))));
   });
 
-  App.registerNav({ order: 40, label: '食札', icon: '🏷️', hash: '#/cards', match: ['cards', 'kinshi'] });
+  App.registerNav({ order: 40, feature: 'cards', label: '食札', icon: '🏷️', hash: '#/cards', match: ['cards', 'kinshi'] });
 })();

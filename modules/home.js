@@ -18,8 +18,8 @@
     [[ctx.today, '今日'], [tomorrow, '明日']].forEach((d) => {
       const ev = M.eventsOn(ctx.residents, d[0], m);
       const ins = ev.filter((e) => e.type === 'in'), outs = ev.filter((e) => e.type === 'out');
-      if (ins.length) out.push({ level: 'info', text: d[1] + 'の入所: ' + ins.map((e) => e.r.name + '（' + M.label(m.meals, e.m) + 'から）').join('、'), href: '#/day/' + d[0] });
-      if (outs.length) out.push({ level: 'info', text: d[1] + 'の退所: ' + outs.map((e) => e.r.name + '（' + M.label(m.meals, e.m) + 'まで）').join('、'), href: '#/day/' + d[0] });
+      if (ins.length) out.push({ level: 'info', text: d[1] + 'の' + V.t('admit') + ': ' + ins.map((e) => e.r.name + '（' + M.label(m.meals, e.m) + 'から）').join('、'), href: '#/day/' + d[0] });
+      if (outs.length) out.push({ level: 'info', text: d[1] + 'の' + V.t('leave') + ': ' + outs.map((e) => e.r.name + '（' + M.label(m.meals, e.m) + 'まで）').join('、'), href: '#/day/' + d[0] });
     });
     return out;
   });
@@ -30,10 +30,15 @@
     residents.forEach((r) => { r._st = M.status(r, today, m.meals); });
     root.appendChild(h('header', { class: 'topbar' }, h('h1', null, U.fmtDate(today, true) + (m.facility.name ? '　' + m.facility.name : '')),
       h('div', { class: 'no-print' }, h('a', { class: 'btn', href: '#/day/' + today }, '変更連絡票'), ' ', h('a', { class: 'btn primary', href: '#/cards/' + today }, '食札を刷る'))));
+    if (!m.profile.setupDone) {
+      root.appendChild(h('div', { class: 'card info' }, h('h2', null, 'はじめに（1/2）　事業所を登録する'),
+        h('p', null, '事業所の種類・給食の出し方・算定している加算を選ぶと、使う機能と画面の言葉がその事業所に合います。あとから何度でも直せます。'),
+        h('button', { class: 'btn primary big', onclick: () => window.Facility.edit({ first: true }) }, '事業所を登録する')));
+    }
     if (!residents.length) {
-      root.appendChild(h('div', { class: 'card info' }, h('h2', null, 'はじめに'),
-        h('p', null, '利用者を登録すると、食札・食数・変更連絡票・禁食一覧がここから全部作られます。'),
-        h('a', { class: 'btn primary big', href: '#/residents' }, '利用者を登録する')));
+      root.appendChild(h('div', { class: 'card info' }, h('h2', null, m.profile.setupDone ? 'はじめに' : 'はじめに（2/2）　' + V.t('person') + 'を登録する'),
+        h('p', null, V.t('person') + 'を登録すると、食札・食数・変更連絡票・禁食一覧がここから全部作られます。'),
+        h('a', { class: 'btn primary big', href: '#/residents' }, V.t('person') + 'を登録する')));
       return;
     }
     const todos = [];

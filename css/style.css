@@ -107,3 +107,8 @@ table.edit td { padding: .2rem .3rem; }
   .no-print-border, .no-print-border.input { border: 0; } input[type=number] { -moz-appearance: textfield; appearance: textfield; }
   details:not([open]) { display: none; } summary { display: none; }
 }
+
+/* 事業所の登録・リンク集 */
+.pickgroup { margin-bottom: .6rem; } .pickgroup-t { font-weight: 700; font-size: .87rem; color: var(--sub); border-bottom: 1px solid var(--line); margin-bottom: .2rem; }
+.linkrow { padding: .45rem 0; border-bottom: 1px solid var(--head); } .linkrow:last-child { border-bottom: 0; }
+.linkname { font-weight: 700; font-size: 1.05rem; } .linkurl { color: var(--sub); font-size: .78rem; word-break: break-all; }

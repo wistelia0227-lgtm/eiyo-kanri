@@ -15,8 +15,8 @@
     const count = { in: 0, planned: 0, rest: 0 };
     all.forEach((r) => { r._st = M.status(r, today, meals); count[r._st]++; });
 
-    root.appendChild(h('header', { class: 'topbar' }, h('h1', null, '利用者'),
-      h('button', { class: 'btn primary', onclick: () => R.editBasic(null) }, '＋ 利用者を登録')));
+    root.appendChild(h('header', { class: 'topbar' }, h('h1', null, V.t('person')),
+      h('button', { class: 'btn primary', onclick: () => R.editBasic(null) }, '＋ ' + V.t('person') + 'を登録')));
     const search = h('input', { class: 'input', type: 'search', placeholder: '氏名・ふりがな・部屋でさがす', value: query,
       oninput: () => { query = search.value; draw(); } });
     root.appendChild(h('div', { class: 'toolrow no-print' },
@@ -31,7 +31,7 @@
       const q = query.trim();
       const rows = all.filter((r) => (filter === 'all' || r._st === filter) && (!q || (r.name + r.kana + r.room + r.unit).indexOf(q) >= 0))
         .sort((a, b) => (a.unit + a.room).localeCompare(b.unit + b.room, 'ja') || (a.kana || a.name).localeCompare(b.kana || b.name, 'ja'));
-      if (!rows.length) { listBox.appendChild(h('div', { class: 'empty' }, all.length ? 'この条件に当てはまる利用者はいません。' : 'まだ利用者が登録されていません。右上のボタンから登録します。')); return; }
+      if (!rows.length) { listBox.appendChild(h('div', { class: 'empty' }, all.length ? 'この条件に当てはまる方はいません。' : 'まだ' + V.t('person') + 'が登録されていません。右上のボタンから登録します。')); return; }
       listBox.appendChild(h('table', { class: 'list' },
         h('thead', null, h('tr', null, ['場所', '氏名', '区分', '状態', '食事（' + V.slotText(slot) + '）', '注意'].map((t) => h('th', null, t)))),
         h('tbody', null, rows.map((r) => {
@@ -79,11 +79,11 @@
       await DB.put('residents', rec);
       if (rec.unit && m.units.indexOf(rec.unit) < 0) { m.units.push(rec.unit); await window.Master.save(); }
       close();
-      if (isNew) { U.toast('登録しました。続けて入所日と食事情報を入れます'); App.go('#/resident/' + rec.id); R.editStay(rec, null); } else App.refresh();
+      if (isNew) { U.toast('登録しました。続けて' + V.t('admit') + '日と食事情報を入れます'); App.go('#/resident/' + rec.id); R.editStay(rec, null); } else App.refresh();
     };
-    close = U.modal(h('div', null, h('h2', null, isNew ? '利用者を登録' : '基本情報を直す'),
+    close = U.modal(h('div', null, h('h2', null, isNew ? V.t('person') + 'を登録' : '基本情報を直す'),
       h('div', { class: 'grid2' }, U.field('氏名', f.name), U.field('ふりがな', f.kana), U.field('区分', f.category), U.field('性別', f.gender),
-        U.field('ユニット・フロア', f.unit), U.field('部屋・席', f.room), U.field('生年月日', f.birth), U.field('身長 (cm)', f.height, 'BMI の計算に使います')),
+        U.field(V.t('place'), f.unit), U.field('部屋・席', f.room), U.field('生年月日', f.birth), U.field('身長 (cm)', f.height, 'BMI の計算に使います')),
       h('datalist', { id: 'dl-units' }, m.units.map((u) => h('option', { value: u }))),
       h('details', { open: !!(wd.length || mt.length) || null }, h('summary', null, '決まった曜日・食事だけ利用する（デイなど）'),
         U.field('利用する曜日（選ばなければ毎日）', toggles(U.WD.map((w, i) => ({ id: i, label: w })), wd)),
@@ -101,8 +101,8 @@
     let close;
     const save = async () => {
       const a = from.get(), b = to.get();
-      if (!a) { U.toast('入所日を入れてください', true); return; }
-      if (b && M.slotKey(m.meals, b) < M.slotKey(m.meals, a)) { U.toast('退所が入所より前になっています', true); return; }
+      if (!a) { U.toast(V.t('admit') + '日を入れてください', true); return; }
+      if (b && M.slotKey(m.meals, b) < M.slotKey(m.meals, a)) { U.toast(V.t('leave') + 'が' + V.t('admit') + 'より前になっています', true); return; }
       const clash = r.stays.find((s) => s !== stay && !s.cancelledAt && M.inRange(m.meals, s, a));
       if (clash) { U.toast('その日は別の在籍期間（' + V.slotText(clash.from) + '〜）と重なっています', true); return; }
       if (stay) {
@@ -116,9 +116,9 @@
       if (!r.diet.some((v) => !v.cancelledAt)) { App.refresh(); R.editDiet(r, a); } else App.refresh();
     };
     const last = r.diet.filter((v) => !v.cancelledAt).length;
-    close = U.modal(h('div', null, h('h2', null, r.name + ' 様　' + (stay ? '在籍期間を直す' : '入所を登録')),
+    close = U.modal(h('div', null, h('h2', null, V.sama(r.name) + '　' + (stay ? '在籍期間を直す' : V.t('admit') + 'を登録')),
       (!stay && last && isShort) ? h('div', { class: 'card info' }, '前回までの食事情報がそのまま使われます。変わった所だけ、登録後に「食事を変更する」で直してください。') : null,
-      U.field('入所', from), U.field('退所（決まっていなければ空のまま）', to), U.field('メモ', note),
+      U.field(V.t('admit'), from), U.field(V.t('leave') + '（決まっていなければ空のまま）', to), U.field('メモ', note),
       h('div', { class: 'modal-btns' }, h('button', { class: 'btn', onclick: () => close() }, 'やめる'), h('button', { class: 'btn primary', onclick: save }, '保存'))));
   };
 
@@ -141,7 +141,7 @@
       } else r.absences.push({ id: U.uid('a'), from: a, to: b, reason: reason.value.trim(), recordedAt: Date.now(), by: V.recorder() });
       await DB.put('residents', r); close(); App.refresh();
     };
-    close = U.modal(h('div', null, h('h2', null, r.name + ' 様　欠食を' + (ab ? '直す' : '登録')),
+    close = U.modal(h('div', null, h('h2', null, V.sama(r.name) + '　欠食を' + (ab ? '直す' : '登録')),
       U.field('理由', reason), h('datalist', { id: 'dl-abs' }, m.absenceReasons.map((x) => h('option', { value: x }))),
       U.field('欠食の始まり', from), U.field('欠食の終わり（戻る日が未定なら空のまま）', to, '例: 昼だけ外出なら、始まりも終わりも同じ日の「昼」'),
       h('div', { class: 'modal-btns' }, h('button', { class: 'btn', onclick: () => close() }, 'やめる'), h('button', { class: 'btn primary', onclick: save }, '保存'))));
@@ -226,7 +226,7 @@
         riskExplained: risk.checked, by: by.value.trim(), recordedAt: Date.now() });
       await DB.put('residents', r); close(); U.toast('保存しました'); App.refresh();
     };
-    close = U.modal(h('div', null, h('h2', null, r.name + ' 様　' + (first ? '食事情報を登録' : '食事を変更する')),
+    close = U.modal(h('div', null, h('h2', null, V.sama(r.name) + '　' + (first ? '食事情報を登録' : '食事を変更する')),
       h('div', { class: 'card' }, h('div', { class: 'grid3' }, U.field('いつから', from), U.field('誰の指示・依頼か' + (first ? '（任意）' : ''), source), U.field('医師の確認', doctor)),
         h('datalist', { id: 'dl-src' }, m.sources.map((x) => h('option', { value: x }))),
         h('div', { class: 'grid2' }, U.field('理由', reason), U.field('記録した人', by)), riskRow),
@@ -244,14 +244,14 @@
   // ---------- 個人画面 ----------
   App.registerScreen('resident', async function (params, root) {
     const r = await DB.get('residents', params[0]);
-    if (!r) { root.appendChild(h('div', { class: 'empty' }, 'この利用者は見つかりません。')); return; }
+    if (!r) { root.appendChild(h('div', { class: 'empty' }, 'この方は見つかりません。')); return; }
     M.normalizeResident(r);
     const m = ms(), today = U.today(), slot = V.nextSlot();
     const d = M.dietAt(r, slot, m.meals);
     const age = M.age(r.birth, today);
     root.appendChild(h('header', { class: 'topbar' },
-      h('div', null, h('a', { href: '#/residents', class: 'back no-print' }, '← 利用者の一覧'),
-        h('h1', null, r.name + ' 様 ', V.statusBadge(M.status(r, today, m.meals))),
+      h('div', null, h('a', { href: '#/residents', class: 'back no-print' }, '← ' + V.t('person') + 'の一覧'),
+        h('h1', null, V.sama(r.name) + ' ', V.statusBadge(M.status(r, today, m.meals))),
         h('div', { class: 'sub' }, [r.kana, V.catLabel(r), V.where(r), age != null ? age + '歳' : '', r.heightCm ? r.heightCm + 'cm' : ''].filter(Boolean).join('　'))),
       h('button', { class: 'btn no-print', onclick: () => R.editBasic(r) }, '基本情報を直す')));
     if (r.memo) root.appendChild(h('div', { class: 'card' }, r.memo));
@@ -274,7 +274,7 @@
       h('td', { class: 'no-print' }, rec.cancelledAt ? null : [h('button', { class: 'btn small', onclick: onEdit }, '直す'), ' ', h('button', { class: 'btn small', onclick: () => cancelRec(r, rec, what) }, '取り消す')]));
     root.appendChild(h('section', { class: 'card' },
       h('div', { class: 'sec-head' }, h('h2', null, '在籍'), h('div', { class: 'no-print' },
-        h('button', { class: 'btn', onclick: () => R.editStay(r, null) }, '＋ 入所を登録'), ' ', h('button', { class: 'btn', onclick: () => R.editAbsence(r, null) }, '＋ 欠食（外出・外泊・入院）'))),
+        h('button', { class: 'btn', onclick: () => R.editStay(r, null) }, '＋ ' + V.t('admit') + 'を登録'), ' ', h('button', { class: 'btn', onclick: () => R.editAbsence(r, null) }, '＋ 欠食（外出・外泊・入院）'))),
       stays.length ? h('table', { class: 'list' }, h('tbody', null, stays.map((s) => recRow(s, V.slotText(s.from, 'から') + ' 〜 ' + V.slotText(s.to, 'まで') + (s.note ? '　' + s.note : ''), () => R.editStay(r, s), '在籍期間')))) : h('div', { class: 'empty' }, '在籍期間がまだありません。'),
       abs.length ? [h('h3', null, '欠食'), h('table', { class: 'list' }, h('tbody', null, abs.map((a) => recRow(a, (a.reason || '欠食') + '　' + V.slotText(a.from, 'から') + ' 〜 ' + V.slotText(a.to, 'まで'), () => R.editAbsence(r, a), '欠食'))))] : null));
 
@@ -296,11 +296,11 @@
         }))) : h('div', { class: 'empty' }, 'まだありません。')));
 
     root.appendChild(h('div', { class: 'toolrow no-print' }, h('button', { class: 'btn danger-outline', onclick: async () => {
-      if (!await U.confirm(r.name + ' 様を一覧から外します。記録は消えず、設定の「外した利用者」から戻せます。', { okLabel: '一覧から外す', danger: true })) return;
+      if (!await U.confirm(V.sama(r.name) + 'を一覧から外します。記録は消えず、設定の「外した利用者」から戻せます。', { okLabel: '一覧から外す', danger: true })) return;
       r.archived = true; await DB.put('residents', r); App.go('#/residents');
-    } }, 'この利用者を一覧から外す')));
+    } }, 'この方を一覧から外す')));
   });
 
-  App.registerNav({ order: 20, label: '利用者', icon: '👤', hash: '#/residents', match: ['residents', 'resident'] });
+  App.registerNav({ order: 20, label: () => V.t('person'), icon: '👤', hash: '#/residents', match: ['residents', 'resident'] });
   window.Residents = R;
 })();

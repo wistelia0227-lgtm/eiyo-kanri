@@ -1,7 +1,9 @@
 // 計算の核の試験。ブラウザ無しで回す: C:/AI/_setup/node/node.exe tools/test_model.js
 'use strict';
 const M = require('../js/model.js');
-const masters = require('../js/master.js').DEFAULTS;
+const P = require('../js/profile.js');
+const Master = require('../js/master.js');
+const masters = Master.DEFAULTS;
 const meals = masters.meals;
 let n = 0, bad = 0;
 function ok(name, cond, extra) { n++; if (!cond) { bad++; console.log('NG  ' + name + (extra !== undefined ? '  → ' + JSON.stringify(extra) : '')); } else console.log('ok  ' + name); }
@@ -99,6 +101,29 @@ ok('リスク: 材料なしは判定しない', M.risk({}, masters.risk).level =
 ok('リスク: Alb 3.5 は中、2.9 は高', M.risk({ alb: 3.5 }, masters.risk).level === 'mid' && M.risk({ alb: 2.9 }, masters.risk).level === 'high');
 ok('リスク: 経腸・静脈栄養は中、褥瘡は高', M.risk({ tube: true }, masters.risk).level === 'mid' && M.risk({ pressureUlcer: true }, masters.risk).level === 'high');
 ok('年齢', M.age('1940-09-21', '2026-09-20') === 85 && M.age('1940-09-20', '2026-09-20') === 86);
+
+// 事業所プロファイル
+const pTokuyo = P.normalize({ kinds: ['tokuyo'], addons: ['kyoka'], setupDone: true });
+ok('特養＋強化加算 → ミールラウンドが入る', pTokuyo.features.rounds === true);
+ok('特養 → 食札・食数が入る', pTokuyo.features.cards && pTokuyo.features.census);
+ok('特養 → 呼び方は入居者', pTokuyo.terms.person === '入居者' && pTokuyo.terms.admit === '入所');
+const pDay = P.normalize({ kinds: ['day'], setupDone: true });
+ok('デイのみ → ミールラウンドは推奨に入らない', pDay.features.rounds === false, pDay.features);
+ok('デイのみ → 体重と食数は入る', pDay.features.weights && pDay.features.census);
+const pHosp = P.normalize({ kinds: ['hospital'] });
+ok('病院 → 患者・病棟・入院', pHosp.terms.person === '患者' && pHosp.terms.place === '病棟' && pHosp.terms.admit === '入院');
+ok('保育園 → 園児・ちゃん', P.normalize({ kinds: ['hoiku'] }).terms.suffix === 'ちゃん');
+ok('手で切った機能は推奨より優先', P.normalize({ kinds: ['tokuyo'], setupDone: true, features: { cards: false } }).features.cards === false);
+ok('enabled: 切った機能は false', !P.enabled(P.normalize({ kinds: ['tokuyo'], setupDone: true, features: { cards: false } }), 'cards') && P.enabled(pTokuyo, 'cards'));
+ok('事業所を登録する前は全部の機能が見える', P.enabled(P.normalize({ kinds: [], features: { cards: false } }), 'cards') && P.normalize({}).features.rounds === true);
+ok('種類を選んでいなければ呼び方は利用者', P.normalize({}).terms.person === '利用者');
+ok('加算の一覧は種類で絞られる', P.addonsFor(['day']).every((a) => a.kinds.indexOf('day') >= 0) && P.addonsFor(['day']).length > 0);
+ok('加算を選ぶと注意書きが出る', P.notes({ kinds: ['tokuyo'], addons: ['kyoka'] }).some((x) => x.text.indexOf('週3回') >= 0));
+ok('呼び方を手で直したら種類を変えても保つ', P.normalize({ kinds: ['tokuyo'], terms: { person: 'ご利用者' } }).terms.person === 'ご利用者');
+// マスタの補完
+const mg = Master.merge({ meals: [{ id: 'l', label: 'ひる' }] });
+ok('merge: プロファイルとリンクと出典が補われる', mg.profile && mg.links.length > 0 && mg.dataSources.length > 0);
+ok('merge: 出典に成分表の版が入る', mg.dataSources.some((s) => s.id === 'foods' && /増補2023/.test(s.version)));
 
 console.log('\n' + (n - bad) + '/' + n + ' 通過' + (bad ? '  ★ 失敗 ' + bad + ' 件' : ''));
 process.exit(bad ? 1 : 0);

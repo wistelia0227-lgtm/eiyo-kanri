@@ -1,7 +1,7 @@
 // 設定: 施設・締切・マスタ（呼び方は全部ここで変えられる）・食札の面付け・バックアップ・外した利用者。
 (function () {
   'use strict';
-  const U = window.U, h = U.h, DB = window.DB, M = window.Model, App = window.App;
+  const U = window.U, h = U.h, DB = window.DB, M = window.Model, V = window.View, App = window.App;
   const ms = () => window.Master.current;
   const save = async (msg) => { await window.Master.save(); U.toast(msg || '保存しました'); };
 
@@ -54,16 +54,15 @@
   }
   const CODE = { key: 'code', label: '学会分類2021 のコード' }, COLOR = { key: 'color', label: '食札の色', type: 'color' };
 
-  App.registerSettings({ order: 10, title: '施設', render: function () {
+  App.registerSettings({ order: 10, title: '締切とめやす', render: function () {
     const m = ms();
-    const name = h('input', { class: 'input', type: 'text', value: m.facility.name }), rec = h('input', { class: 'input', type: 'text', value: m.facility.recorder });
     const days = h('input', { class: 'input num', type: 'number', min: '0', value: m.deadline.daysBefore }), time = h('input', { class: 'input', type: 'time', value: m.deadline.time });
     const alert = h('input', { class: 'input num', type: 'number', step: '0.5', value: m.weightAlertKg });
-    return h('div', { class: 'card' }, h('div', { class: 'grid2' }, U.field('施設名', name), U.field('いつも記録する人', rec),
+    return h('div', { class: 'card' }, h('div', { class: 'grid2' },
       U.field('食数の締切（食事の何日前）', days), U.field('締切の時刻', time, '委託先・厨房への連絡の締切。過ぎてから入った変更を一覧にします'),
       U.field('体重の差を赤くする幅 (kg)', alert)),
       h('button', { class: 'btn primary', onclick: async () => {
-        m.facility = { name: name.value.trim(), recorder: rec.value.trim() }; m.deadline = { daysBefore: parseInt(days.value, 10) || 0, time: time.value || '15:00' };
+        m.deadline = { daysBefore: parseInt(days.value, 10) || 0, time: time.value || '15:00' };
         m.weightAlertKg = parseFloat(alert.value) || 2; await save(); App.refresh();
       } }, '保存'));
   } });
@@ -79,7 +78,7 @@
       listEditor('thick', 'とろみ', []), listEditor('portion', '量', []), listEditor('assist', '介助', []), listEditor('cond', '条件つきの指示の「条件」', []),
       listEditor('extraRows', '利用者以外の食事（食数表に足す行）', M.activeMeals(m).map((ml) => ({ key: ml.id, label: ml.label + 'の既定数', type: 'number',
         get: (it) => (it.def && it.def[ml.id]) || 0, set: (it, v) => { it.def = it.def || {}; it.def[ml.id] = v; } })), '毎日ほぼ同じ数なら既定数を入れておきます。日ごとの数は「今日」や食数の日別画面で直せます。'),
-      textListEditor('units', 'ユニット・フロア'), textListEditor('tools', '食器・自助具'), textListEditor('allergens', 'アレルギーの候補'),
+      textListEditor('units', V.t('place')), textListEditor('tools', '食器・自助具'), textListEditor('allergens', 'アレルギーの候補'),
       textListEditor('sources', '指示・依頼した人'), textListEditor('absenceReasons', '欠食の理由'));
   } });
 
