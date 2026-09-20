@@ -130,3 +130,6 @@ table.menu tr.total td { text-align: left; font-size: .82rem; font-weight: 400; 
 .histo { margin: .4rem 0; } .hbar { display: flex; align-items: center; gap: .4rem; font-size: .85rem; }
 .hlabel { width: 4rem; text-align: right; } .hfill { background: var(--primary); height: .7rem; border-radius: 3px; min-width: 2px; }
 .credit { margin-top: 1.5rem; }
+
+.how { max-width: 26rem; white-space: normal; }
+code { background: var(--head); padding: .15rem .4rem; border-radius: 4px; font-size: .92rem; }

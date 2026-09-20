@@ -26,18 +26,25 @@
     const stale = (m.dataSources || []).filter((s) => !s.checkedAt || days(s.checkedAt) > STALE_DAYS);
     root.appendChild(h('section', { class: 'card' }, h('h2', null, '使っているデータの版'),
       h('div', { class: 'sub' }, '制度や成分表が新しくなっていないか、ときどき公式ページで確かめてください。確かめたら「確認した」を押すと日付が残ります。'),
-      h('table', { class: 'list' }, h('thead', null, h('tr', null, ['データ', '今の版', '最後に確かめた日', ''].map((t) => h('th', null, t)))),
+      h('table', { class: 'list' }, h('thead', null, h('tr', null, ['データ', '今の版', '更新に気づく手がかり', '最後に確かめた日', ''].map((t) => h('th', null, t)))),
         h('tbody', null, (m.dataSources || []).map((s) => {
           const d = days(s.checkedAt);
           return h('tr', null,
-            h('td', null, h('a', { href: s.url, target: '_blank', rel: 'noopener noreferrer' }, s.label), s.note ? h('div', { class: 'sub' }, s.note) : null),
+            h('td', null, h('a', { href: s.url, target: '_blank', rel: 'noopener noreferrer' }, s.label),
+              s.url2 ? [' ', h('a', { href: s.url2, target: '_blank', rel: 'noopener noreferrer', class: 'sub' }, '（予告のページ）')] : null,
+              s.note ? h('div', { class: 'sub' }, s.note) : null),
             h('td', null, s.version),
+            h('td', { class: 'sub how' }, s.how || ''),
             h('td', { class: (d == null || d > STALE_DAYS) ? 'warn-text' : '' }, s.checkedAt ? s.checkedAt + '（' + d + '日前）' : 'まだ'),
             h('td', { class: 'no-print' }, h('button', { class: 'btn small', onclick: async () => {
               s.checkedAt = U.today(); await window.Master.save(); U.toast(s.label + ' を確認済みにしました'); App.refresh();
             } }, '確認した')));
         }))),
-      stale.length ? h('div', { class: 'sub warn-text' }, stale.length + ' 件が半年以上確かめられていません。') : null));
+      stale.length ? h('div', { class: 'sub warn-text' }, stale.length + ' 件が半年以上確かめられていません。') : null,
+      h('div', { class: 'card info' }, h('b', null, 'まとめて自動で調べる'),
+        h('div', null, 'インターネットにつながっているパソコンで、アプリのフォルダから次を実行すると、上の公式ページを見に行って前回との差を出します。'),
+        h('code', null, 'python tools' + String.fromCharCode(92) + 'check_updates.py --save'),
+        h('div', { class: 'sub' }, '結果は画面と tools' + String.fromCharCode(92) + 'update_report.txt に出ます。ブラウザからは他所のサイトを読めない決まりがあるので、この調べ物だけ外で行います。'))));
 
     cats.forEach((c) => {
       root.appendChild(h('h2', { class: 'sec' }, c));
@@ -78,10 +85,10 @@
       h('table', { class: 'list edit' }, h('thead', null, h('tr', null, ['データ', '版', '覚え書き', '確かめた日'].map((t) => h('th', null, t)))),
         h('tbody', null, m.dataSources.map((s) => h('tr', null,
           h('td', null, h('a', { href: s.url, target: '_blank', rel: 'noopener noreferrer' }, s.label)),
-          h('td', null, h('input', { class: 'input', type: 'text', value: s.version, onchange: async (e) => { s.version = e.target.value.trim(); await window.Master.save(); } })),
-          h('td', null, h('input', { class: 'input', type: 'text', value: s.note || '', onchange: async (e) => { s.note = e.target.value.trim(); await window.Master.save(); } })),
+          h('td', null, h('input', { class: 'input', type: 'text', value: s.version, onchange: async (e) => { s.version = e.target.value.trim(); s.versionEdited = true; await window.Master.save(); } })),
+          h('td', null, h('input', { class: 'input', type: 'text', value: s.note || '', onchange: async (e) => { s.note = e.target.value.trim(); s.noteEdited = true; await window.Master.save(); } })),
           h('td', null, h('input', { class: 'input', type: 'date', value: s.checkedAt || '', onchange: async (e) => { s.checkedAt = e.target.value; await window.Master.save(); } })))))),
-      h('div', { class: 'sub' }, '食品成分表を新しい版に入れ替える手順は docs/PLAN.md に書いてあります。'));
+      h('div', { class: 'sub' }, '更新の有無は tools' + String.fromCharCode(92) + 'check_updates.py で調べられます（「情報」の画面に手順）。食品成分表を新しい版に入れ替える手順は docs/PLAN.md に書いてあります。'));
   } });
 
   App.registerTodo(async function () {

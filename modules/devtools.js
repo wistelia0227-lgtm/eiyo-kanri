@@ -143,6 +143,14 @@
       ok('未測定の成分は合計に足さない', Object.keys(dayAll.missing).length >= 0);
     }
 
+    // リンク集と出典
+    ok('リンクが 96 件、分類つきで入っている', m.links.length === 96 && new Set(m.links.map((l) => l.c)).size >= 7, m.links.length);
+    ok('リンクの URL が全部 https', m.links.every((l) => /^https:/.test(l.u)), m.links.filter((l) => !/^https:/.test(l.u)).map((l) => l.n));
+    ok('掲示板・Q&A の分類がある', m.links.some((l) => l.c === '掲示板・Q&A'));
+    ok('出典に「更新に気づく手がかり」が全部ある', m.dataSources.every((s) => s.how && s.how.length > 10), m.dataSources.filter((s) => !s.how).map((s) => s.id));
+    ok('アレルギー品目は 28、先頭 9 が表示義務でカシューナッツを含む',
+      m.allergens.length === 28 && m.allergens.slice(0, 9).indexOf('カシューナッツ') >= 0 && m.allergens.slice(0, 9).indexOf('くるみ') >= 0, m.allergens.slice(0, 9));
+
     // 全画面が例外なく描ける
     for (const name of Object.keys(App.screens)) {
       const box = h('div'); let err = null;
