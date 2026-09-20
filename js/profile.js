@@ -8,7 +8,7 @@
   // 事業所の種類。terms = 呼び方の初期値、feat = この種類でふつう使う機能
   P.KINDS = [
     { id: 'tokuyo', label: '特別養護老人ホーム', group: '介護保険施設', terms: { person: '入居者', suffix: '様', place: 'ユニット・フロア', admit: '入所', leave: '退所' },
-      feat: ['census', 'cards', 'weights', 'rounds'], ncm: 'facility' },
+      feat: ['census', 'cards', 'weights', 'rounds', 'menu'], ncm: 'facility' },
     { id: 'chiiki', label: '地域密着型特養', group: '介護保険施設', terms: { person: '入居者', suffix: '様', place: 'ユニット', admit: '入所', leave: '退所' },
       feat: ['census', 'cards', 'weights', 'rounds'], ncm: 'facility' },
     { id: 'roken', label: '介護老人保健施設', group: '介護保険施設', terms: { person: '入所者', suffix: '様', place: 'フロア・棟', admit: '入所', leave: '退所' },
@@ -78,6 +78,7 @@
     { id: 'cards', label: '食札・禁食一覧', desc: '食札の印刷と、禁食・アレルギーの一覧' },
     { id: 'weights', label: '体重', desc: 'まとめて入力、減少率とリスクの目安' },
     { id: 'rounds', label: 'ミールラウンド', desc: '食事の観察の記録（○◎）と週3回の確認' },
+    { id: 'menu', label: '献立・栄養計算', desc: '料理マスタ、献立、栄養価と給与栄養目標量' },
     { id: 'links', label: '情報リンク', desc: '制度・食品・掲示板などのリンク集' }
   ];
 
@@ -90,6 +91,8 @@
     (profile.kinds || []).forEach((id) => { const k = P.kind(id); if (k) k.feat.forEach((f) => { on[f] = true; }); });
     (profile.addons || []).forEach((id) => { const a = P.ADDONS.find((x) => x.id === id); if (a) a.feat.forEach((f) => { on[f] = true; }); });
     on.links = true;
+    // 直営なら献立を自分で作る。委託・完調品・配食でも、栄養価の確認に使えるので推奨から外さない
+    if (!profile.supply || profile.supply === 'direct') on.menu = true;
     // 献立が外から来る施設でも、食数と食札は施設側に残る（調査 03）。ここでは機能を減らさない
     return on;
   };

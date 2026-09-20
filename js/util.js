@@ -134,6 +134,8 @@
     draw();
     const el = h('div', { class: 'chiplist' }, box, input, h('datalist', { id: id }, (suggestions || []).map((s) => h('option', { value: s }))));
     el.get = () => { add(); return list.slice(); };
+    el.peek = () => list.slice();
+    el.push = (v) => { if (v && list.indexOf(v) < 0) { list.push(v); draw(); } };
     return el;
   };
 

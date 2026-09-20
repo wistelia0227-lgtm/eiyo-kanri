@@ -4,7 +4,7 @@
 // スキーマを変える時は既存ストアに触らず、version を上げて新ストアを足す。
 (function () {
   'use strict';
-  const DB = { name: 'eiyo_kanri_db', version: 1 };
+  const DB = { name: 'eiyo_kanri_db', version: 2 };
   const q = location.search;
   if (/[?&]selftest/.test(q)) DB.name = 'eiyo_kanri_selftest';
   else if (/[?&]demo/.test(q)) DB.name = 'eiyo_kanri_demo';
@@ -26,6 +26,8 @@
         mk('measures', { keyPath: 'id' }, ['residentId']);
         mk('rounds', { keyPath: 'id' }, ['residentId', 'date']);
         mk('daily', { keyPath: 'date' });
+        mk('dishes', { keyPath: 'id' });
+        mk('menus', { keyPath: 'date' });
         mk('meta', { keyPath: 'key' });
       };
       req.onsuccess = () => resolve(req.result);
@@ -45,7 +47,7 @@
     }));
   }
 
-  DB.STORES = ['residents', 'measures', 'rounds', 'daily', 'meta'];
+  DB.STORES = ['residents', 'measures', 'rounds', 'daily', 'dishes', 'menus', 'meta'];
   DB.getAll = (store) => run(store, 'readonly', (s) => s.getAll());
   DB.get = (store, id) => run(store, 'readonly', (s) => s.get(id));
   DB.put = (store, obj) => run(store, 'readwrite', (s) => s.put(obj));

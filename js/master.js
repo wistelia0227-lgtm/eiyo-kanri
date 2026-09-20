@@ -46,6 +46,9 @@
     // 低栄養リスクの判定値（厚生労働省 様式例の基準。変わったらここを直す）
     risk: { bmiMid: 18.5, loss: { m1: { mid: 3, high: 5 }, m3: { mid: 3, high: 7.5 }, m6: { mid: 3, high: 10 } }, albMid: 3.5, albHigh: 3.0, intakeMid: 75 },
     weightAlertKg: 2,
+    nutrientKeys: null,      // 画面に出す栄養素（null = 基本の6つ）
+    dishKinds: ['主食', '主菜', '副菜', '汁物', 'デザート', '飲み物'],
+    targets: {},             // 食種ID → { energy, age, sex, setAt } 給与栄養目標量
     // 情報リンク。設定で足す・消す・並べ替えができる
     links: null, // null = 既定のリンク集（LINKS）を使う
     // 使っているデータの版と、最新かどうかを人が確かめた日

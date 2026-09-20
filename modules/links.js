@@ -92,5 +92,13 @@
     return old.length ? [{ level: 'info', text: '制度・データの版を半年以上確かめていません（' + old.map((s) => s.label).join('、') + '）', href: '#/links' }] : [];
   });
 
+  App.registerSettings({ order: 95, title: 'このアプリについて', render: function () {
+    const n = window.Nutri;
+    return h('div', { class: 'card' },
+      h('div', null, '栄養・食事管理'),
+      n && n.loaded() ? h('div', { class: 'sub' }, '栄養計算に使っているデータ: ' + n.meta.citation + '（' + n.count() + ' 食品）') : h('div', { class: 'sub warn-text' }, '成分表が読み込まれていません（js/foods_data.js）'),
+      h('div', { class: 'sub' }, '食事摂取基準: 日本人の食事摂取基準（' + (n ? n.DRI_VERSION : '') + '）'));
+  } });
+
   App.registerNav({ order: 80, feature: 'links', label: '情報', icon: '🔗', hash: '#/links', match: ['links'] });
 })();

@@ -112,3 +112,21 @@ table.edit td { padding: .2rem .3rem; }
 .pickgroup { margin-bottom: .6rem; } .pickgroup-t { font-weight: 700; font-size: .87rem; color: var(--sub); border-bottom: 1px solid var(--line); margin-bottom: .2rem; }
 .linkrow { padding: .45rem 0; border-bottom: 1px solid var(--head); } .linkrow:last-child { border-bottom: 0; }
 .linkname { font-weight: 700; font-size: 1.05rem; } .linkurl { color: var(--sub); font-size: .78rem; word-break: break-all; }
+
+/* 栄養計算 */
+.nutri-row { display: flex; flex-wrap: wrap; gap: .3rem; margin: .3rem 0; }
+.nutri-chip { background: var(--head); border-radius: 6px; padding: .1rem .5rem; white-space: nowrap; }
+.nutri-chip .nk { font-size: .78rem; color: var(--sub); margin-right: .3rem; } .nutri-chip .nu { font-size: .75rem; color: var(--sub); margin-left: .1rem; }
+.nutri-chip.j-low, td.j-low, .j-low { color: var(--info); font-weight: 700; } .nutri-chip.j-low { background: var(--infobg); }
+.nutri-chip.j-high, td.j-high, .j-high { color: var(--bad); font-weight: 700; } .nutri-chip.j-high { background: var(--badbg); }
+.est { color: var(--sub); }
+.picklist { max-height: 55vh; overflow: auto; margin: .5rem 0; border: 1px solid var(--line); border-radius: 8px; }
+.pickitem { display: block; width: 100%; text-align: left; border: 0; border-bottom: 1px solid var(--head); background: none; padding: .45rem .7rem; cursor: pointer; font: inherit; }
+.pickitem:hover { background: var(--infobg); } .pi-name { display: block; font-weight: 700; }
+table.foods td, table.foods th { text-align: right; } table.foods th:nth-child(-n+3), table.foods tbody th { text-align: left; white-space: normal; }
+table.menu td.menucell { text-align: left; vertical-align: top; min-width: 9rem; cursor: pointer; white-space: normal; }
+table.menu td.menucell:hover { background: var(--infobg); } .mdish { font-size: .92rem; } .msum { font-size: .78rem; color: var(--sub); margin-top: .2rem; }
+table.menu tr.total td { text-align: left; font-size: .82rem; font-weight: 400; }
+.histo { margin: .4rem 0; } .hbar { display: flex; align-items: center; gap: .4rem; font-size: .85rem; }
+.hlabel { width: 4rem; text-align: right; } .hfill { background: var(--primary); height: .7rem; border-radius: 3px; min-width: 2px; }
+.credit { margin-top: 1.5rem; }

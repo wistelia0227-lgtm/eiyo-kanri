@@ -58,6 +58,7 @@
   App.start = function () {
     window.addEventListener('hashchange', () => render(false));
     const boot = async () => {
+      if (window.Nutri && window.FOODS_DATA) window.Nutri.load(window.FOODS_DATA);
       await window.Master.load();
       if (App.beforeStart) await App.beforeStart();
       render(false);
