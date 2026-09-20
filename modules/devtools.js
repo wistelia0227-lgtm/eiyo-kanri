@@ -49,6 +49,28 @@
     [0, 1, 2].forEach((i) => [0, -2].forEach((k) => rs.push({ id: list[i].id + '_' + day(k), residentId: list[i].id, date: day(k), mark: i === 0 && k === 0 ? 'oo' : 'o', meal: 'l', staple: i === 0 ? 5 : 10, side: i === 0 ? 4 : 9, note: i === 0 && k === 0 ? '汁物でむせ込み 2 回。きざみへの変更を看護師と相談。' : '', recordedAt: now })));
     await DB.putMany('rounds', rs);
 
+    // 栄養ケア・マネジメントの記録（様式4-1-1）
+    const NC = window.NCM;
+    const ncRec = (r, date, o) => NC.normalize(Object.assign(NC.empty(r.id, date), { id: U.uid('n'), by: '栄養 花子', recordedAt: now }, o));
+    const ncm = [
+      // 山田さん: 高リスク。2週毎なので期限切れ
+      ncRec(list[0], day(-30), { process: 'screening', level: 'high',
+        body: { heightCm: 148, weightKg: 41.2, loss1: 2.8, loss3: 7.4, loss6: 13.5, ulcer: false, feeding: 'oral' },
+        intake: { pct: 60, staple: 50, side: 60, other: '' }, swallow: { need: true, code: '4', thick: 'thin' },
+        will: { motivation: 4, satisfaction: 4, attitude: 3 }, issues: ['水分でむせる', '食事中、食後に咳をすることがある'],
+        evaluation: 'not', special: '汁物でむせ込みが増えている。きざみ・薄いとろみへ変更を検討。' }),
+      // 佐藤さん: 低リスク（3月毎）
+      ncRec(list[1], day(-20), { process: 'screening', level: 'low',
+        body: { heightCm: 162, weightKg: 57.6, loss1: 0.7, loss3: 0.3, loss6: 0.7, ulcer: false, feeding: 'oral' },
+        intake: { pct: 100, staple: 100, side: 100, other: '' }, will: { motivation: 1, satisfaction: 2, attitude: 2 }, evaluation: 'maintained' }),
+      // 鈴木さん: 中リスク（1月毎）、もうすぐ期限
+      ncRec(list[2], day(-28), { process: 'monitoring', level: 'mid',
+        body: { heightCm: 145, weightKg: 38.0, loss1: 0.3, loss3: 0, loss6: null, ulcer: false, feeding: 'partial' },
+        intake: { pct: 70, staple: 60, side: 70, other: '高カロリーゼリー 1個/日' }, swallow: { need: true, code: '2-1', thick: 'mid' },
+        will: { motivation: 3, satisfaction: 3, attitude: 3 }, issues: ['食べ物を口腔内に溜め込む'], evaluation: 'maintained' })
+    ];
+    await DB.putMany('ncm', ncm);
+
     // 料理と献立（成分表が読み込まれている時だけ）
     if (!window.Nutri || !window.Nutri.loaded()) return;
     m.targets = { jo: { energy: 1500, age: 82, sex: 'f', setAt: today } };
@@ -122,6 +144,25 @@
     ok('機能を切っても画面の関数は残る（直接開けば動く）', typeof App.screens.cards === 'function');
     ok('切った機能はメニューに出ない', !window.Profile.enabled(prof, 'cards'), navNames());
     prof.features.cards = true; await window.Master.save();
+
+    // 栄養ケア・マネジメント
+    {
+      const NC = window.NCM, recsN = await window.Ncm.all();
+      ok('見本の栄養ケアの記録が 3 件', recsN.length === 3, recsN.length);
+      const y = res.find((r) => r.name === '山田 ハナ');
+      const due = NC.nextDue(y, recsN, m2, today);
+      ok('高リスクは 2 週毎 → 30 日前の記録なら期限切れ', due.overdueDays > 0 && due.lastLevel === 'high', due.overdueDays);
+      const s2 = res.find((r) => r.name === '佐藤 正一');
+      ok('低リスクは 90 日毎 → まだ先', M.dayNum(NC.nextDue(s2, recsN, m2, today).due) > M.dayNum(today));
+      const nw = res.find((r) => r.name === '高橋 キヨ');
+      ok('記録が無い人は入所+7日が期限', NC.nextDue(nw, recsN, m2, today).kind === 'first');
+      const dl = NC.dueList(res, recsN, m2, today, 7);
+      ok('期限の一覧に山田さんが入り、期限切れが先頭', dl.length > 0 && dl[0].daysLeft < 0);
+      const cp = NC.copyFrom(recsN.find((x) => x.residentId === y.id), today, 'monitoring');
+      ok('前回複写: 体重は残り、総合評価は空になる', cp.body.weightKg === 41.2 && cp.evaluation === '');
+      const al = NC.autoLevel(recsN.find((x) => x.residentId === y.id), m2.risk);
+      ok('山田さんの自動判定は高リスク', al.level === 'high', al.reasons);
+    }
 
     // 栄養計算
     if (window.Nutri && window.Nutri.loaded()) {

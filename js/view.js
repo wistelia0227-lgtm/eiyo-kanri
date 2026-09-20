@@ -10,6 +10,7 @@
   V.t = function (key) { const m = window.Master.current, p = m && m.profile; return (p && p.terms && p.terms[key]) || FALLBACK[key] || ''; };
   V.sama = function (name) { return name + ' ' + V.t('suffix'); };
   V.stayInCats = function () { return ms().categories.filter((c) => c.stayIn !== false).map((c) => c.id); };
+  V.ncmCats = function () { return ms().categories.filter((c) => c.ncm).map((c) => c.id); };
 
   V.STATUS = { in: { label: '在籍中', cls: 'ok' }, planned: { label: '予定あり', cls: 'info' }, rest: { label: '休止中', cls: 'mute' } };
   V.statusBadge = (st) => h('span', { class: 'badge ' + V.STATUS[st].cls }, V.STATUS[st].label);

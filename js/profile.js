@@ -48,13 +48,13 @@
   // 加算・減算。kinds = 対象の事業所の種類、feat = 算定するなら要る機能、note = 画面に出す一言
   // 出典: 厚生労働省 令和6年度介護報酬改定（研究レポート 02_制度と様式.md 2.1）。単位数は改定で変わるのでここには持たない
   P.ADDONS = [
-    { id: 'genzan', label: '栄養ケア・マネジメント（未実施は減算）', kinds: ['tokuyo', 'chiiki', 'roken', 'iryoin'], feat: ['weights'],
+    { id: 'genzan', label: '栄養ケア・マネジメント（未実施は減算）', kinds: ['tokuyo', 'chiiki', 'roken', 'iryoin'], feat: ['weights', 'ncm'],
       note: '入所者全員が対象。体重は全員1月毎、再スクリーニングは全員3月毎。' },
-    { id: 'kyoka', label: '栄養マネジメント強化加算', kinds: ['tokuyo', 'chiiki', 'roken', 'iryoin'], feat: ['weights', 'rounds'],
+    { id: 'kyoka', label: '栄養マネジメント強化加算', kinds: ['tokuyo', 'chiiki', 'roken', 'iryoin'], feat: ['weights', 'rounds', 'ncm'],
       note: '食事の観察が週3回以上（異なる日）。観察した日付と、調整した時の対応を記録する。' },
     { id: 'ikou', label: '経口移行加算', kinds: ['tokuyo', 'chiiki', 'roken', 'iryoin'], feat: [],
       note: '医師の指示が要る。同意日から180日以内。超える時は医師の指示をおおむね2週間毎。' },
-    { id: 'iji', label: '経口維持加算', kinds: ['tokuyo', 'chiiki', 'roken', 'iryoin'], feat: ['rounds'],
+    { id: 'iji', label: '経口維持加算', kinds: ['tokuyo', 'chiiki', 'roken', 'iryoin'], feat: ['rounds', 'ncm'],
       note: '月1回以上、多職種で食事の観察と会議。' },
     { id: 'ryoyo', label: '療養食加算', kinds: ['tokuyo', 'chiiki', 'roken', 'iryoin', 'short', 'hospital'], feat: ['cards'],
       note: '主治医の食事箋に基づく提供と、療養食の献立表が要る。食種マスタの「療養食」に印を付ける。' },
@@ -62,9 +62,9 @@
       note: '入院先を訪問し、医療機関の管理栄養士と連携して再入所後の計画を作る。' },
     { id: 'taisho', label: '退所時栄養情報連携加算', kinds: ['tokuyo', 'chiiki', 'roken', 'iryoin'], feat: [],
       note: '退所時に栄養情報提供書（様式4-2）を渡す。退所月に1回まで。' },
-    { id: 'assess', label: '栄養アセスメント加算', kinds: ['day', 'shoki'], feat: ['weights'],
+    { id: 'assess', label: '栄養アセスメント加算', kinds: ['day', 'shoki'], feat: ['weights', 'ncm'],
       note: '3月に1回以上のアセスメントと LIFE への提出。' },
-    { id: 'kaizen', label: '栄養改善加算', kinds: ['day', 'shoki'], feat: ['weights'],
+    { id: 'kaizen', label: '栄養改善加算', kinds: ['day', 'shoki'], feat: ['weights', 'ncm'],
       note: '月2回まで、原則3月以内。3月毎にケアマネジャーへ情報提供。' },
     { id: 'screening', label: '口腔・栄養スクリーニング加算', kinds: ['day', 'shoki', 'gh', 'yuryo', 'short'], feat: [],
       note: '利用開始時と、利用中は6月ごと。' },
@@ -78,6 +78,7 @@
     { id: 'cards', label: '食札・禁食一覧', desc: '食札の印刷と、禁食・アレルギーの一覧' },
     { id: 'weights', label: '体重', desc: 'まとめて入力、減少率とリスクの目安' },
     { id: 'rounds', label: 'ミールラウンド', desc: '食事の観察の記録（○◎）と週3回の確認' },
+    { id: 'ncm', label: '栄養ケア・マネジメント', desc: '様式4-1-1 の記録、期限の管理、前回複写' },
     { id: 'menu', label: '献立・栄養計算', desc: '料理マスタ、献立、栄養価と給与栄養目標量' },
     { id: 'links', label: '情報リンク', desc: '制度・食品・掲示板などのリンク集' }
   ];
@@ -88,7 +89,7 @@
   // 登録内容から「推奨の機能」を出す
   P.recommend = function (profile) {
     const on = {};
-    (profile.kinds || []).forEach((id) => { const k = P.kind(id); if (k) k.feat.forEach((f) => { on[f] = true; }); });
+    (profile.kinds || []).forEach((id) => { const k = P.kind(id); if (k) { k.feat.forEach((f) => { on[f] = true; }); if (k.ncm) on.ncm = true; } });
     (profile.addons || []).forEach((id) => { const a = P.ADDONS.find((x) => x.id === id); if (a) a.feat.forEach((f) => { on[f] = true; }); });
     on.links = true;
     // 直営なら献立を自分で作る。委託・完調品・配食でも、栄養価の確認に使えるので推奨から外さない

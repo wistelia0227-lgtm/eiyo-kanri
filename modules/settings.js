@@ -72,7 +72,10 @@
     return h('div', null,
       h('div', { class: 'sub' }, '施設の呼び方に合わせて直せます。呼び方を変えても、登録済みの利用者の記録はそのまま付いてきます。'),
       listEditor('meals', '食事の区分', [{ key: 'on', label: '使う', type: 'check', get: (it) => it.on !== false }], 'おやつの数も数える時は「使う」に印を付けます。'),
-      listEditor('categories', '利用者の区分', []),
+      listEditor('categories', '利用者の区分', [
+        { key: 'stayIn', label: '泊まる', type: 'check', get: (it) => it.stayIn !== false },
+        { key: 'ncm', label: '栄養ケアの対象', type: 'check' }],
+        '「泊まる」はミールラウンドの対象、「栄養ケアの対象」は栄養ケア・マネジメントの期限管理の対象です。施設の栄養ケア・マネジメントは入所者が対象で、短期入所には強化加算などの設定がありません。'),
       listEditor('shokushu', '食種', [COLOR, { key: 'ryoyo', label: '療養食', type: 'check' }]),
       listEditor('staple', '主食', [CODE]), listEditor('side', '副食の形態', [CODE, COLOR]),
       listEditor('thick', 'とろみ', []), listEditor('portion', '量', []), listEditor('assist', '介助', []), listEditor('cond', '条件つきの指示の「条件」', []),
