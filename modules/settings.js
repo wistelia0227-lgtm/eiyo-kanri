@@ -107,6 +107,36 @@
         h('tr', null, h('td', null, '食事摂取量（% 以下）'), h('td', null, num(t, 'intakeMid')), h('td', null, '—')))));
   } });
 
+  App.registerSettings({ order: 50, title: '文例', render: function () {
+    const m = ms(), P = window.Phrases;
+    const box = h('div');
+    let cur = P.FIELDS[0].id;
+    function draw() {
+      const list = m.phrases[cur] = m.phrases[cur] || [];
+      box.innerHTML = '';
+      box.appendChild(h('div', { class: 'toolrow' }, P.FIELDS.map((f) => h('button', {
+        class: 'btn seg' + (cur === f.id ? ' on' : ''), onclick: () => { cur = f.id; draw(); } }, f.label + ' ' + ((m.phrases[f.id] || []).length)))));
+      box.appendChild(h('table', { class: 'list edit' }, h('tbody', null, list.map((t, i) => h('tr', null,
+        h('td', null, h('input', { class: 'input', type: 'text', value: t,
+          onchange: async (e) => { list[i] = e.target.value.trim(); await save(); } })),
+        h('td', { class: 'nowrap' },
+          h('button', { class: 'btn small', disabled: i === 0, onclick: async () => { list.splice(i - 1, 0, list.splice(i, 1)[0]); await save(); draw(); } }, '↑'), ' ',
+          h('button', { class: 'btn small', onclick: async () => { list.splice(i, 1); await save(); draw(); } }, '消す')))))));
+      const add = h('input', { class: 'input', type: 'text', placeholder: '文例を足す' });
+      const doAdd = async () => { const v = add.value.trim(); if (!v) return; list.push(v); await save(); draw(); };
+      add.addEventListener('keydown', (e) => { if (e.key === 'Enter') doAdd(); });
+      box.appendChild(h('div', { class: 'toolrow' }, add, h('button', { class: 'btn', onclick: doAdd }, '足す'),
+        h('button', { class: 'btn', onclick: async () => {
+          if (!await U.confirm('この欄の文例を最初の状態に戻します。', { okLabel: '戻す', danger: true })) return;
+          m.phrases[cur] = (P.DEFAULTS[cur] || []).slice(); await save(); draw();
+        } }, '最初の状態に戻す')));
+    }
+    draw();
+    return h('div', { class: 'card' },
+      h('div', { class: 'sub' }, '記録の欄ごとに文例を持ちます。入力画面の「文例」ボタンから、チェックで選んで入れられます（複数選ぶとつながります）。'),
+      box);
+  } });
+
   App.registerSettings({ order: 80, title: 'バックアップ', render: function () {
     return h('div', { class: 'card' }, h('div', { class: 'sub' }, 'データはこのパソコンのこのブラウザの中にあります。閲覧データを消すと一緒に消えるので、定期的にファイルへ保存してください。'),
       h('div', { class: 'toolrow' },

@@ -107,6 +107,20 @@
     return out;
   });
 
+  if (window.Board) window.Board.registerColumn({
+    order: 20, id: 'weight', feature: 'weights', label: '体重（今月）',
+    prepare: async function (ctx) { ctx.weights = await W.byResident(); },
+    cell: function (r, ctx) {
+      const month = ctx.today.slice(0, 7);
+      const list = ctx.weights[r.id] || [];
+      const thisMonth = list.filter((w) => w.date.slice(0, 7) === month).slice(-1)[0];
+      const ev = W.evaluate(r, list, ctx.today);
+      const day = Number(ctx.today.slice(8));
+      if (thisMonth) return { text: thisMonth.value.toFixed(1) + 'kg', sub: U.fmtDate(thisMonth.date) + (ev.risk.level ? '・リスク' + { low: '低', mid: '中', high: '高' }[ev.risk.level] : ''), state: ev.risk.level === 'high' ? 'soon' : 'ok', onclick: () => App.go('#/weights') };
+      return { text: 'まだ', sub: ev.cur ? '前回 ' + U.fmtDate(ev.cur.date) : '記録なし', state: day >= 20 ? 'over' : 'soon', onclick: () => App.go('#/weights') };
+    }
+  });
+
   App.registerNav({ order: 50, feature: 'weights', label: '体重', icon: '⚖️', hash: '#/weights', match: ['weights'] });
   window.Weights = W;
 })();

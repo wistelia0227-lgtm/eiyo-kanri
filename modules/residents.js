@@ -229,7 +229,7 @@
     close = U.modal(h('div', null, h('h2', null, V.sama(r.name) + '　' + (first ? '食事情報を登録' : '食事を変更する')),
       h('div', { class: 'card' }, h('div', { class: 'grid3' }, U.field('いつから', from), U.field('誰の指示・依頼か' + (first ? '（任意）' : ''), source), U.field('医師の確認', doctor)),
         h('datalist', { id: 'dl-src' }, m.sources.map((x) => h('option', { value: x }))),
-        h('div', { class: 'grid2' }, U.field('理由', reason), U.field('記録した人', by)), riskRow),
+        h('div', { class: 'grid2' }, U.field('理由', U.withPhrases('diet.reason', reason)), U.field('記録した人', by)), riskRow),
       h('h3', null, 'アレルギー・禁食'),
       U.field('アレルギー', f.allergy), U.field('禁食と代わりの物', kinshi),
       h('h3', null, '食事の内容'),
@@ -237,7 +237,7 @@
         U.field('副食', f.side), U.field('汁のとろみ', f.soupThick), U.field('飲み物のとろみ', f.drinkThick),
         U.field('量', f.portion), U.field('介助', f.assist), U.field('配膳場所', f.place)),
       byMealBox,
-      U.field('補食・栄養補助食品', supp), U.field('条件つきの指示', cond), U.field('食器・自助具', f.tools), U.field('注意（食札にそのまま出ます）', f.notes),
+      U.field('補食・栄養補助食品', supp), U.field('条件つきの指示', cond), U.field('食器・自助具', f.tools), U.field('注意（食札にそのまま出ます）', U.withPhrases('diet.notes', f.notes)),
       h('div', { class: 'modal-btns' }, h('button', { class: 'btn', onclick: () => close() }, 'やめる'), h('button', { class: 'btn primary', onclick: save }, '保存'))), { wide: true });
   };
 
@@ -299,6 +299,18 @@
       if (!await U.confirm(V.sama(r.name) + 'を一覧から外します。記録は消えず、設定の「外した利用者」から戻せます。', { okLabel: '一覧から外す', danger: true })) return;
       r.archived = true; await DB.put('residents', r); App.go('#/residents');
     } }, 'この方を一覧から外す')));
+  });
+
+  if (window.Board) window.Board.registerColumn({
+    order: 5, id: 'diet', label: '食事情報',
+    prepare: function (ctx) { ctx.slot = V.nextSlot(); },
+    cell: function (r, ctx) {
+      const d = M.dietAt(r, ctx.slot, ctx.m.meals);
+      const waits = r.diet.some((v) => !v.cancelledAt && v.doctor === 'wait');
+      if (!d) return { text: '未設定', sub: '食札が作れません', state: 'over', onclick: () => R.editDiet(r) };
+      if (waits) return { text: '医師の確認待ち', sub: V.dietShort(d), state: 'soon', onclick: () => App.go('#/resident/' + r.id) };
+      return { text: V.dietShort(d), sub: (d.allergy.length || d.kinshi.length) ? 'ア/禁 あり' : '', state: 'ok', onclick: () => R.editDiet(r) };
+    }
   });
 
   App.registerNav({ order: 20, label: () => V.t('person'), icon: '👤', hash: '#/residents', match: ['residents', 'resident'] });

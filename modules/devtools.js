@@ -192,6 +192,33 @@
     ok('アレルギー品目は 28、先頭 9 が表示義務でカシューナッツを含む',
       m.allergens.length === 28 && m.allergens.slice(0, 9).indexOf('カシューナッツ') >= 0 && m.allergens.slice(0, 9).indexOf('くるみ') >= 0, m.allergens.slice(0, 9));
 
+    // 文例
+    ok('文例が欄ごとに 10 欄ある', Object.keys(m.phrases).length >= 10, Object.keys(m.phrases).length);
+    ok('特記事項の文例が入っている', m.phrases['ncm.special'].length >= 5);
+    ok('文例をつなげられる', window.Phrases.apply('', ['A', 'B'], 'replace').indexOf('A') === 0);
+    ok('今の文に足せる', window.Phrases.apply('元', ['A'], 'append').indexOf('元') === 0);
+    ok('同じ文は二重に足さない', window.Phrases.add(m, 'ncm.special', m.phrases['ncm.special'][0]) === false);
+
+    // やること一覧
+    {
+      const built = await window.Board.build(today);
+      ok('やること一覧に列が 4 つ（食事情報・栄養ケア・体重・ラウンド）', built.cols.length === 4, built.cols.map((c) => c.label));
+      ok('やること一覧の行は在籍者の数', built.rows.length === res.filter((r) => M.status(r, today, m2.meals) === 'in').length, built.rows.length);
+      const y2 = built.rows.find((x) => x.resident.name === '山田 ハナ');
+      ok('山田さんの栄養ケアのセルは期限切れ', y2.cells[1].state === 'over', y2.cells[1]);
+      const sh = built.rows.find((x) => x.resident.name === '渡辺 茂');
+      ok('ショートの人の栄養ケアは対象外', sh.cells[1].state === 'none', sh.cells[1]);
+      ok('セルを押す動きが付いている', typeof y2.cells[1].onclick === 'function');
+    }
+
+    // 保存済みマスタへの項目の補完
+    {
+      const mg = window.Master.merge({ categories: [{ id: 'long', label: '入所' }] });
+      ok('古い区分に「栄養ケアの対象」が補われる', mg.categories[0].ncm === true, mg.categories[0]);
+      const mg2 = window.Master.merge({ shokushu: [{ id: 'jo', label: 'ふつう食', color: '#ff0000' }] });
+      ok('保存した名前と色は上書きされない', mg2.shokushu[0].label === 'ふつう食' && mg2.shokushu[0].color === '#ff0000');
+    }
+
     // 全画面が例外なく描ける
     for (const name of Object.keys(App.screens)) {
       const box = h('div'); let err = null;

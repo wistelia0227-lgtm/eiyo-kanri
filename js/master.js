@@ -49,6 +49,7 @@
     // 低栄養リスクの判定値（厚生労働省 様式例の基準。変わったらここを直す）
     risk: { bmiMid: 18.5, loss: { m1: { mid: 3, high: 5 }, m3: { mid: 3, high: 7.5 }, m6: { mid: 3, high: 10 } }, albMid: 3.5, albHigh: 3.0, intakeMid: 75 },
     weightAlertKg: 2,
+    phrases: null,            // 欄ごとの文例（js/phrases.js）
     ncm: null,                // 栄養ケアの期限（js/ncm.js の DEFAULT_INTERVALS）
     nutrientKeys: null,      // 画面に出す栄養素（null = 基本の6つ）
     dishKinds: ['主食', '主菜', '副菜', '汁物', 'デザート', '飲み物'],
@@ -206,7 +207,20 @@
   Master.merge = function (saved) {
     const out = JSON.parse(JSON.stringify(DEFAULTS));
     Object.keys(saved || {}).forEach((k) => { out[k] = saved[k]; });
+    // 保存済みの一覧（食事・区分・食種など）に、後から足した項目を補う。
+    // 既に入っている値は触らず、その id の既定に「あって保存側に無いキー」だけを足す
+    Object.keys(DEFAULTS).forEach((k) => {
+      const def = DEFAULTS[k], cur = out[k];
+      if (!Array.isArray(def) || !Array.isArray(cur) || !def.length || typeof def[0] !== 'object') return;
+      cur.forEach((item) => {
+        if (!item || typeof item !== 'object') return;
+        const d = def.find((x) => x.id === item.id);
+        if (!d) return;
+        Object.keys(d).forEach((key) => { if (!(key in item)) item[key] = JSON.parse(JSON.stringify(d[key])); });
+      });
+    });
     out.profile = (typeof Profile !== 'undefined' ? Profile : require('./profile.js')).normalize(out.profile);
+    out.phrases = (typeof Phrases !== 'undefined' ? Phrases : require('./phrases.js')).merge(out.phrases);
     // リンク集: 自分で足したり消したりしていなければ、新しい既定に入れ替える
     if (!out.links || (!out.linksEdited && out.linksVersion !== LINKS_VERSION)) {
       out.links = JSON.parse(JSON.stringify(LINKS));

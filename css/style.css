@@ -133,3 +133,16 @@ table.menu tr.total td { text-align: left; font-size: .82rem; font-weight: 400; 
 
 .how { max-width: 26rem; white-space: normal; }
 code { background: var(--head); padding: .15rem .4rem; border-radius: 4px; font-size: .92rem; }
+
+.phrase-wrap { display: flex; gap: .3rem; align-items: flex-start; }
+.phrase-wrap > :first-child { flex: 1; min-width: 0; }
+.phrase-btn { flex: none; }
+.phrase { display: flex; gap: .5rem; align-items: flex-start; padding: .4rem .7rem; border-bottom: 1px solid var(--head); cursor: pointer; }
+.phrase:hover { background: var(--infobg); } .phrase span { flex: 1; }
+
+table.board td.bcell { text-align: left; white-space: normal; min-width: 7.5rem; cursor: pointer; vertical-align: top; }
+table.board td.bcell:hover { outline: 2px solid var(--primary); outline-offset: -2px; }
+table.board td.over { background: var(--badbg); } table.board td.over .bmain { color: var(--bad); font-weight: 700; }
+table.board td.soon { background: var(--warnbg); } table.board td.soon .bmain { color: var(--warn); font-weight: 700; }
+table.board td.none { background: #f3f4f6; color: #9ca3af; cursor: default; }
+.bmain { font-size: .95rem; }

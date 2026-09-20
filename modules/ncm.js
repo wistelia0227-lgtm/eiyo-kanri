@@ -172,11 +172,11 @@
         h('div', { class: 'toolrow' }, pull),
         h('div', { class: 'grid3' }, U.field('身長 (cm)', f.height), U.field('体重 (kg)', f.weight), U.field('栄養補給法', f.feeding)),
         h('div', { class: 'grid3' }, U.field('体重減少率 1か月 (%)', f.loss1), U.field('3か月 (%)', f.loss3), U.field('6か月 (%)', f.loss6)),
-        chk(r.body, 'ulcer', '褥瘡あり'), U.field('その他', f.otherBody)),
+        chk(r.body, 'ulcer', '褥瘡あり'), U.field('その他', U.withPhrases('ncm.other', f.otherBody))),
       h('h3', null, '食生活の状況'),
       h('div', { class: 'card' },
         h('div', { class: 'grid3' }, U.field('食事摂取量 (%)', f.pct), U.field('主食 (%)', f.staple), U.field('主菜・副菜 (%)', f.side)),
-        U.field('その他（補助食品など）', f.otherIntake),
+        U.field('その他（補助食品など）', U.withPhrases('ncm.intakeOther', f.otherIntake)),
         h('table', { class: 'list edit' }, h('thead', null, h('tr', null, ['', 'エネルギー (kcal)', 'たんぱく質 (g)'].map((t) => h('th', null, t)))),
           h('tbody', null,
             h('tr', null, h('td', null, '摂取栄養量'), h('td', null, f.inKcal), h('td', null, f.inProt)),
@@ -184,7 +184,7 @@
             h('tr', null, h('td', null, '必要栄養量'), h('td', null, f.needKcal), h('td', null, f.needProt)))),
         h('div', { class: 'grid3' }, U.field('食事の形態（学会分類コード）', f.swCode), U.field('とろみ', f.swThick),
           U.field('嚥下調整食の必要性', h('div', null, chk(r.swallow, 'need', '必要あり')))),
-        U.field('食事の留意事項', f.cautionText),
+        U.field('食事の留意事項', U.withPhrases('ncm.caution', f.cautionText)),
         h('div', { class: 'grid3' }, U.field('本人の意欲', five('motivation', N.FIVE)), U.field('食欲・食事の満足感', five('satisfaction', N.FIVE_SAT)), U.field('食事に対する意識', five('attitude', N.FIVE_SAT)))),
       h('h3', null, '多職種による栄養ケアの課題'),
       h('div', { class: 'card' }, h('div', { class: 'sub' }, '口腔・摂食嚥下'), issueBox(N.ISSUES_ORAL),
@@ -193,7 +193,7 @@
       h('div', { class: 'grid3' }, U.field('総合評価', f.evaluation),
         U.field('計画変更', h('div', null, chk(r, 'planChange', '計画を変更する'))),
         U.field('GLIM基準（医療機関から情報提供があった場合）', f.glim)),
-      U.field('特記事項', f.special),
+      U.field('特記事項', U.withPhrases('ncm.special', f.special)),
       h('div', { class: 'modal-btns' },
         (!isNew) ? h('button', { class: 'btn danger-outline', onclick: async () => {
           if (!await U.confirm('この記録を消します。', { okLabel: '消す', danger: true })) return;
@@ -303,6 +303,23 @@
         U.field('高リスクのモニタリング（日）', num('high')),
         U.field('再スクリーニング（全員・日）', num('rescreen'))));
   } });
+
+  // やること一覧の列
+  if (window.Board) window.Board.registerColumn({
+    order: 10, id: 'ncm', feature: 'ncm', label: '栄養ケア',
+    prepare: async function (ctx) { ctx.ncmRecs = await X.all(); ctx.ncmCats = V.ncmCats(); },
+    cell: function (r, ctx) {
+      if (ctx.ncmCats.indexOf(r.category) < 0) return { text: '—', state: 'none' };
+      const d = N.nextDue(r, ctx.ncmRecs, ctx.m, ctx.today);
+      const left = M.dayNum(d.due) - M.dayNum(ctx.today);
+      return {
+        text: left < 0 ? (-left) + '日超過' : (left === 0 ? '今日' : 'あと' + left + '日'),
+        sub: U.fmtDate(d.due) + (d.lastLevel ? '・' + label(N.LEVELS, d.lastLevel) + 'リスク' : '・初回'),
+        state: left < 0 ? 'over' : (left <= 7 ? 'soon' : 'ok'),
+        onclick: () => X.start(r, d.kind)
+      };
+    }
+  });
 
   App.registerNav({ order: 25, feature: 'ncm', label: '栄養ケア', icon: '📝', hash: '#/ncm', match: ['ncm'] });
   window.Ncm = X;

@@ -24,7 +24,7 @@
     };
     close = U.modal(h('div', null, h('h2', null, V.sama(r.name) + '　' + U.fmtDate(date) + ' のミールラウンド'),
       h('div', { class: 'grid3' }, U.field('食事', meal), U.field('主食の摂取', staple), U.field('副食の摂取', side)),
-      U.field('メモ（書くと ◎ になります）', note),
+      U.field('メモ（書くと ◎ になります）', U.withPhrases('round.note', note)),
       h('div', { class: 'modal-btns' }, rec ? h('button', { class: 'btn danger-outline', onclick: () => save(null) }, '記録を消す') : null,
         h('button', { class: 'btn', onclick: () => close() }, 'やめる'), h('button', { class: 'btn primary', onclick: () => save('o') }, '記録する'))));
   }
@@ -85,6 +85,27 @@
     const target = ctx.residents.filter((r) => r._st === 'in' && stayIn.indexOf(r.category) >= 0);
     const few = target.filter((r) => (recs[r.id] || 0) < 3);
     return (target.length && few.length) ? [{ level: 'info', text: '今週のミールラウンドが 3 回未満の人: ' + few.length + '人（対象 ' + target.length + '人中）', href: '#/rounds' }] : [];
+  });
+
+  if (window.Board) window.Board.registerColumn({
+    order: 30, id: 'round', feature: 'rounds', label: 'ラウンド（今週）',
+    prepare: async function (ctx) {
+      const ws = weekStart(ctx.today);
+      ctx.roundCount = {}; ctx.roundHas = {};
+      (await DB.getAll('rounds')).forEach((x) => {
+        if (x.date >= ws && x.date <= M.addDays(ws, 6)) ctx.roundCount[x.residentId] = (ctx.roundCount[x.residentId] || 0) + 1;
+        if (x.date === ctx.today) ctx.roundHas[x.residentId] = x;
+      });
+      ctx.roundCats = V.stayInCats();
+    },
+    cell: function (r, ctx) {
+      if (ctx.roundCats.indexOf(r.category) < 0) return { text: '—', state: 'none' };
+      const n = ctx.roundCount[r.id] || 0;
+      const dow = (M.weekday(ctx.today) + 6) % 7; // 月曜からの日数
+      const state = n >= 3 ? 'ok' : (dow >= 4 ? 'over' : 'soon');
+      return { text: n + ' / 3 回', sub: ctx.roundHas[r.id] ? '今日は記録済み' : '今日はまだ',
+        state: state, onclick: () => editRound(r, ctx.today, ctx.roundHas[r.id]) };
+    }
   });
 
   App.registerNav({ order: 60, feature: 'rounds', label: 'ラウンド', icon: '👀', hash: '#/rounds', match: ['rounds'] });

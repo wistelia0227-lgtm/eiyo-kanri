@@ -139,6 +139,54 @@
     return el;
   };
 
+  // 文例つきの入力欄。欄の右肩に 本マーク（文例を選ぶ）と 鉛筆（今の文を文例に足す）
+  // key = js/phrases.js の欄 ID。target = input か textarea
+  U.withPhrases = function (key, target, opts) {
+    opts = opts || {};
+    const P = window.Phrases, ms = () => window.Master.current;
+    const open = () => {
+      const list = P.get(ms(), key);
+      const picked = [];
+      let close, draw;
+      const box = h('div', { class: 'picklist' });
+      let editing = false;
+      draw = function () {
+        box.innerHTML = '';
+        if (!list.length) box.appendChild(h('div', { class: 'empty' }, 'まだ文例がありません。下の「今の文を文例に足す」か、設定 → 文例 で足せます。'));
+        list.forEach((t, i) => {
+          const cb = h('input', { type: 'checkbox', checked: picked.indexOf(t) >= 0,
+            onchange: (e) => { if (e.target.checked) picked.push(t); else picked.splice(picked.indexOf(t), 1); } });
+          box.appendChild(h('label', { class: 'phrase' }, cb, h('span', null, t),
+            editing ? h('button', { type: 'button', class: 'btn small', onclick: async () => {
+              list.splice(i, 1); ms().phrases[key] = list; await window.Master.save(); draw();
+            } }, '消す') : null));
+        });
+      };
+      draw();
+      const put = (mode) => {
+        if (!picked.length) { U.toast('文を選んでください', true); return; }
+        target.value = P.apply(target.value, picked, mode, opts.sep);
+        target.dispatchEvent(new Event('change'));
+        close();
+      };
+      close = U.modal(h('div', null,
+        h('h2', null, P.label(key) + ' の文例'),
+        h('div', { class: 'sub' }, 'チェックを入れて「入れる」か「今の文に足す」。複数選ぶとつながります。'),
+        box,
+        h('div', { class: 'toolrow' },
+          h('button', { class: 'btn primary', onclick: () => put('replace') }, '入れる'),
+          h('button', { class: 'btn', onclick: () => put('append') }, '今の文に足す'),
+          h('button', { class: 'btn', onclick: async () => {
+            if (!P.add(ms(), key, target.value)) { U.toast('空か、もう入っています', true); return; }
+            await window.Master.save(); U.toast('文例に足しました'); draw();
+          } }, '今の文を文例に足す'),
+          h('button', { class: 'btn small', onclick: () => { editing = !editing; draw(); } }, '文例を消す')),
+        h('div', { class: 'modal-btns' }, h('button', { class: 'btn', onclick: () => close() }, '閉じる'))), { wide: true });
+    };
+    const btn = h('button', { type: 'button', class: 'btn small phrase-btn', title: '文例から選ぶ', onclick: open }, '文例');
+    return h('div', { class: 'phrase-wrap' }, target, btn);
+  };
+
   // ファイルとして保存 / 読み込み
   U.download = function (filename, text, mime) {
     const url = URL.createObjectURL(new Blob([text], { type: mime || 'application/json' }));
