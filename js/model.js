@@ -123,6 +123,29 @@
     return out;
   };
 
+  // 変更連絡票の「前／後」2 行に並べる項目。値が変わった所だけ ★ を付けて読む人が拾えるようにする
+  M.ROW_FIELDS = [
+    { key: 'shokushu', label: '食種', master: 'shokushu' },
+    { key: 'staple', label: '主食', master: 'staple', withG: true },
+    { key: 'side', label: '副食', master: 'side' },
+    { key: 'soupThick', label: '汁とろみ', master: 'thick' },
+    { key: 'drinkThick', label: '飲物とろみ', master: 'thick' },
+    { key: 'portion', label: '量', master: 'portion' },
+    { key: 'kinshi', label: '禁食' },
+    { key: 'allergy', label: 'アレルギー' },
+    { key: 'notes', label: '注意' }
+  ];
+  M.rowOf = function (data, masters) {
+    const d = M.normalizeDiet(data);
+    return M.ROW_FIELDS.map((f) => {
+      if (f.key === 'kinshi') return M.kinshiText(d);
+      if (f.key === 'allergy') return d.allergy.join('、');
+      if (f.key === 'notes') return d.notes || '';
+      const v = f.master ? M.label(masters[f.master], d[f.key]) : (d[f.key] || '');
+      return f.withG && d.stapleG ? (v + ' ' + d.stapleG + 'g') : v;
+    });
+  };
+
   // ---- 食数 ----
   M.census = function (residents, slot, masters) {
     const meals = masters.meals;
@@ -140,6 +163,31 @@
       c.rows.push({ r: r, diet: d });
     });
     return c;
+  };
+
+  // ---- 禁食・アレルギー × その日に出る物 ----
+  // words = その食事に出る物を表す言葉の並び（料理名・材料名・料理に付けたアレルギー品目・「パン」「麺」などの合図）
+  // 突き合わせは名前の一致。加工品は名前に出ないので漏れる（画面に必ずその旨を出すこと）
+  M.matchRestrictions = function (diet, words) {
+    const hits = [];
+    if (!diet) return hits;
+    const src = (words || []).filter(Boolean);
+    const find = (needle) => src.filter((w) => w.indexOf(needle) >= 0);
+    diet.allergy.forEach((a) => { const w = find(a); if (w.length) hits.push({ kind: 'allergy', word: a, sub: '', where: w }); });
+    diet.kinshi.forEach((k) => { const w = find(k.food); if (w.length) hits.push({ kind: 'kinshi', word: k.food, sub: k.sub || '', where: w }); });
+    return hits;
+  };
+  // その枠に食べる人それぞれについて、当たるものを返す
+  M.restrictionsAt = function (residents, slot, masters, words) {
+    const out = [];
+    residents.forEach((r) => {
+      if (r.archived) return;
+      if (M.presence(r, slot, masters.meals).state !== 'in') return;
+      const d = M.dietAt(r, slot, masters.meals);
+      const hits = M.matchRestrictions(d, words);
+      if (hits.length) out.push({ r: r, diet: d, hits: hits });
+    });
+    return out.sort((a, b) => (a.r.unit + a.r.room).localeCompare(b.r.unit + b.r.room, 'ja'));
   };
 
   // ---- その日の変更（変更者一覧・変更連絡票・「変更があった人だけ食札」） ----

@@ -219,6 +219,36 @@
       ok('保存した名前と色は上書きされない', mg2.shokushu[0].label === 'ふつう食' && mg2.shokushu[0].color === '#ff0000');
     }
 
+    // 禁食・アレルギー × 出る物
+    {
+      const y3 = res.find((r) => r.name === '佐藤 正一');   // アレルギー えび・かに、禁食 納豆→豆腐
+      const d3 = M.dietAt(y3, { d: today, m: 'l' }, m2.meals);
+      const hit = M.matchRestrictions(d3, ['えびフライ', 'ごはん']);
+      ok('アレルギーが料理名から当たる', hit.length === 1 && hit[0].kind === 'allergy' && hit[0].word === 'えび', hit);
+      const hit2 = M.matchRestrictions(d3, ['納豆', 'ごはん']);
+      ok('禁食が当たり、代わりの物が付く', hit2.length === 1 && hit2[0].kind === 'kinshi' && hit2[0].sub === '豆腐', hit2);
+      ok('当たらない物では出ない', M.matchRestrictions(d3, ['ごはん', 'みそ汁']).length === 0);
+      const rows = M.restrictionsAt(res, { d: today, m: 'd' }, m2, ['鶏肉']);
+      ok('鶏肉で高橋さんが当たる（禁食 鶏肉→魚）', rows.some((x) => x.r.name === '高橋 キヨ'), rows.map((x) => x.r.name));
+      ok('その枠にいない人は出ない（渡辺さんは朝で退所）', !rows.some((x) => x.r.name === '渡辺 茂'));
+      ok('欠食の人は出ない（高橋さんは昼が受診）', !M.restrictionsAt(res, { d: today, m: 'l' }, m2, ['鶏肉']).some((x) => x.r.name === '高橋 キヨ'));
+      // 献立から出る物の言葉
+      const ds2 = await window.Dishes.all(); const dm2 = {}; ds2.forEach((d) => { dm2[d.id] = d; });
+      const w = window.Menu.wordsOf([{ dishId: 'd_nikujaga' }], dm2);
+      ok('料理から材料名とアレルギー品目が言葉として出る', w.indexOf('肉じゃが') >= 0 && w.indexOf('豚肉') >= 0 && w.some((x) => x.indexOf('じゃがいも') >= 0), w.slice(0, 5));
+    }
+
+    // 変更の前後 2 行
+    {
+      const y4 = res.find((r) => r.name === '山田 ハナ');
+      const v = y4.diet[y4.diet.length - 1];
+      const prev = M.prevVersion(y4, v, m2.meals);
+      const before = M.rowOf(prev.data, m2), after = M.rowOf(v.data, m2);
+      ok('前後の行が同じ長さ', before.length === after.length && before.length === M.ROW_FIELDS.length);
+      const changed = before.map((x, i) => x !== after[i]).filter(Boolean).length;
+      ok('変わった所だけ違う（主食・副食・汁とろみ・注意）', changed === 4, { before: before, after: after });
+    }
+
     // 全画面が例外なく描ける
     for (const name of Object.keys(App.screens)) {
       const box = h('div'); let err = null;

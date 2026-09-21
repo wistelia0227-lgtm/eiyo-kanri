@@ -112,6 +112,24 @@
         h('td', null, h('a', { href: '#/resident/' + e.r.id }, e.r.name)), h('td', null, h('b', null, e.text), (e.lines || []).map((l) => h('div', null, l))),
         h('td', { class: 'sub' }, e.type === 'diet' ? [e.rec.source, e.rec.doctor === 'wait' ? '医師確認待ち' : ''].filter(Boolean).join('・') : ''))))) : h('div', { class: 'empty' }, '変更はありません。'));
 
+    // 食事変更の「前／後」2 行（献ダテマンの食札情報変更一覧表の形。変わった値に ★）
+    const dietEv = ev.filter((e) => e.type === 'diet');
+    if (dietEv.length) {
+      box.appendChild(h('h2', { class: 'sec' }, '食事変更の前と後'));
+      const head = ['区分', '場所', '氏名'].concat(M.ROW_FIELDS.map((f) => f.label));
+      box.appendChild(h('div', { class: 'scroll-x' }, h('table', { class: 'grid beforeafter' },
+        h('thead', null, h('tr', null, head.map((t) => h('th', null, t)))),
+        h('tbody', null, dietEv.map((e) => {
+          const prev = M.prevVersion(e.r, e.rec, m.meals);
+          const before = M.rowOf(prev ? prev.data : null, m), after = M.rowOf(e.rec.data, m);
+          const mk = (label, vals, other, star) => h('tr', { class: star ? 'after' : 'before' },
+            h('td', null, label), h('td', null, V.where(e.r)), h('td', null, e.r.name),
+            vals.map((v, i) => h('td', { class: (star && v !== other[i]) ? 'changed' : '' },
+              (star && v !== other[i]) ? '★' + (v || 'なし') : (v || ''))));
+          return [mk('前', before, after, false), mk('後 ' + M.label(m.meals, e.m) + 'から', after, before, true)];
+        })))));
+    }
+
     // 欠食の人
     const absent = {}; cs.forEach((x) => x.c.absent.forEach((a) => { (absent[a.r.id] = absent[a.r.id] || { r: a.r, reason: a.absence.reason, meals: [] }).meals.push(x.ml.label); }));
     if (Object.keys(absent).length) box.appendChild(h('div', null, h('h2', { class: 'sec' }, '欠食'),

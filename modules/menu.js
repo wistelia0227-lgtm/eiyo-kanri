@@ -93,7 +93,20 @@
   };
 
   // ---- セルの編集 ----
-  async function editCell(date, mealId, sId, dishMap) {
+  // その食事に出る物を表す言葉（料理名・材料名・料理のアレルギー品目）
+  Menu.wordsOf = function (list, dishMap) {
+    const w = [];
+    (list || []).forEach((c) => {
+      const d = dishMap[c.dishId];
+      if (!d) { if (c.name) w.push(c.name); return; }
+      w.push(d.name);
+      d.items.forEach((it) => { if (it.name) w.push(it.name); });
+      d.allergy.forEach((a) => w.push(a));
+    });
+    return w;
+  };
+
+  async function editCell(date, mealId, sId, dishMap, residentsCache) {
     const rec = await Menu.get(date);
     const key = Menu.cellKey(mealId, sId);
     const m = ms();
@@ -119,6 +132,18 @@
       const s = Menu.sumCell(l, dishMap);
       sumBox.innerHTML = '';
       sumBox.appendChild(h('div', null, h('b', null, 'この食事の合計'), Foods.sumRow(s, Foods.shownKeys())));
+      // 禁食・アレルギーに当たる人（献立と禁食一覧を人が突き合わせなくて済むように）
+      const words = Menu.wordsOf(l, dishMap);
+      const hitRows = M.restrictionsAt(residentsCache, { d: date, m: mealId }, m, words);
+      if (hitRows.length) sumBox.appendChild(h('div', { class: 'card warn' },
+        h('b', null, 'この食事が当たる人（' + hitRows.length + '人）'),
+        h('table', { class: 'list' }, h('tbody', null, hitRows.map((x) => h('tr', null,
+          h('td', null, V.where(x.r) + ' ' + x.r.name),
+          h('td', null, x.hits.map((hh) => h('div', { class: hh.kind === 'allergy' ? 'bad-text' : 'warn-text' },
+            (hh.kind === 'allergy' ? 'アレルギー ' : '禁食 ') + hh.word + '（' + hh.where.join('・') + '）' + (hh.sub ? ' → ' + hh.sub : '')))),
+          h('td', { class: 'no-print' }, h('a', { class: 'btn small', href: '#/resident/' + x.r.id }, '開く')))))),
+        h('div', { class: 'sub' }, '料理名・材料名・料理に付けたアレルギー品目との名前の一致で拾っています。加工品など名前に出ないものは漏れます。')));
+      else if (l.length) sumBox.appendChild(h('div', { class: 'sub' }, '禁食・アレルギーに当たる人はいません（名前の一致で確認）。'));
     };
     redraw();
     close = U.modal(h('div', null,
@@ -152,6 +177,15 @@
     const recs = {};
     for (const d of days) recs[d] = await Menu.get(d);
     const tgt = Menu.targetOf(sId);
+    const residents = await DB.residents();
+    // マスごとに「禁食・アレルギーに当たる人がいるか」を先に数える
+    const warnDays = {};
+    days.forEach((d) => meals.forEach((ml) => {
+      const l = Menu.cellDishes(recs[d], ml.id, sId);
+      if (!l.length) return;
+      const n = M.restrictionsAt(residents, { d: d, m: ml.id }, m, Menu.wordsOf(l, dishMap)).length;
+      if (n) warnDays[d + '/' + ml.id] = n;
+    }));
 
     root.appendChild(h('header', { class: 'topbar' }, h('h1', null, '献立　' + U.fmtDate(start, true) + ' 〜 ' + U.fmtDate(days[days.length - 1])),
       h('div', { class: 'no-print' }, h('button', { class: 'btn', onclick: () => window.print() }, '印刷'), ' ',
@@ -182,10 +216,11 @@
             const l = Menu.cellDishes(recs[d], ml.id, sId);
             const s = Menu.sumCell(l, dishMap);
             const alg = Menu.allergensOf(l, dishMap);
-            return h('td', { class: 'menucell', onclick: () => editCell(d, ml.id, sId, dishMap) },
+            return h('td', { class: 'menucell' + (warnDays[d + '/' + ml.id] ? ' hit' : ''), onclick: () => editCell(d, ml.id, sId, dishMap, residents) },
               l.length ? h('div', null, l.map((c) => h('div', { class: 'mdish' }, (dishMap[c.dishId] || { name: c.name }).name + ((c.x != null && c.x !== 1) ? ' ×' + c.x : ''))),
                 h('div', { class: 'msum' }, N.fmt('kcal', s.values.kcal) + 'kcal　食塩' + N.fmt('nacl', s.values.nacl) + 'g'),
-                alg.length ? h('div', { class: 'tag bad' }, alg.join('・')) : null)
+                alg.length ? h('div', { class: 'tag bad' }, alg.join('・')) : null,
+                warnDays[d + '/' + ml.id] ? h('div', { class: 'tag bad' }, '当たる人 ' + warnDays[d + '/' + ml.id] + '人') : null)
               : h('span', { class: 'sub no-print' }, '＋'));
           }))),
         // 1 日の合計
