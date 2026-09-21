@@ -71,34 +71,12 @@
     ];
     await DB.putMany('ncm', ncm);
 
-    // 料理と献立（成分表が読み込まれている時だけ）
-    if (!window.Nutri || !window.Nutri.loaded()) return;
+    // 料理と献立: 初期データ（js/dishes_seed.js）をそのまま使う
+    if (!window.Nutri || !window.Nutri.loaded() || !window.Seed || !window.Seed.available()) return;
     m.targets = { jo: { energy: 1500, age: 82, sex: 'f', setAt: today } };
     await window.Master.save();
-    const dish = (id, name, kind, items, allergy) => ({ id: id, name: name, kana: '', kind: kind, servings: 1,
-      items: items.map((x) => ({ no: x[0], name: (window.Nutri.get(x[0]) || { name: '?' }).name, g: x[1] })), allergy: allergy || [], memo: '', updatedAt: now });
-    const dishes = [
-      dish('d_gohan', 'ごはん', '主食', [['01088', 150]]),
-      dish('d_kayu', '全粥', '主食', [['01093', 300]]),
-      dish('d_miso', 'みそ汁（豆腐・わかめ）', '汁物', [['17045', 12], ['04032', 30], ['09041', 1], ['06226', 5]], ['大豆']),
-      dish('d_sake', '鮭の塩焼き', '主菜', [['10134', 60], ['17012', 0.5]], ['さけ']),
-      dish('d_nikujaga', '肉じゃが', '主菜', [['11130', 50], ['02017', 80], ['06212', 30], ['06153', 20], ['17007', 10], ['03003', 5]], ['豚肉', '小麦', '大豆']),
-      dish('d_ohitashi', 'ほうれん草のお浸し', '副菜', [['06268', 60], ['17007', 4], ['10092', 1]], ['小麦', '大豆']),
-      dish('d_hijiki', 'ひじきの煮物', '副菜', [['09050', 5], ['04040', 15], ['06214', 15], ['17007', 5], ['03003', 3]], ['大豆', '小麦']),
-      dish('d_yogurt', 'ヨーグルト', 'デザート', [['13025', 80]], ['乳']),
-      dish('d_banana', 'バナナ', 'デザート', [['07107', 80]], ['バナナ'])
-    ];
-    await DB.putMany('dishes', dishes);
-    const menus = [];
-    for (let k = -2; k <= 4; k++) {
-      const d = day(k);
-      menus.push({ date: d, cells: {
-        'b/jo': [{ dishId: 'd_gohan', name: 'ごはん', x: 1 }, { dishId: 'd_miso', name: 'みそ汁（豆腐・わかめ）', x: 1 }, { dishId: 'd_sake', name: '鮭の塩焼き', x: 1 }, { dishId: 'd_ohitashi', name: 'ほうれん草のお浸し', x: 1 }],
-        'l/jo': [{ dishId: 'd_gohan', name: 'ごはん', x: 1 }, { dishId: 'd_nikujaga', name: '肉じゃが', x: 1 }, { dishId: 'd_hijiki', name: 'ひじきの煮物', x: 1 }, { dishId: 'd_yogurt', name: 'ヨーグルト', x: 1 }],
-        'd/jo': [{ dishId: 'd_gohan', name: 'ごはん', x: 1 }, { dishId: 'd_miso', name: 'みそ汁（豆腐・わかめ）', x: 1 }, { dishId: 'd_sake', name: '鮭の塩焼き', x: 1 }, { dishId: 'd_banana', name: 'バナナ', x: 1 }]
-      } });
-    }
-    await DB.putMany('menus', menus);
+    await window.Seed.importDishes();
+    await window.Seed.importCycle(day(-2), 'jo', true);
   }
 
   async function selftest() {
@@ -168,9 +146,9 @@
     if (window.Nutri && window.Nutri.loaded()) {
       ok('成分表が読み込まれている', window.Nutri.count() === 2538, window.Nutri.count());
       const ds = await window.Dishes.all();
-      ok('見本の料理が 9 件', ds.length === 9, ds.length);
-      const gohan = ds.find((d) => d.id === 'd_gohan');
-      ok('ごはん 150g は 234kcal', window.Nutri.round('kcal', window.Dishes.sumOf(gohan).values.kcal) === 234, window.Dishes.sumOf(gohan).values.kcal);
+      ok('見本に初期データの料理 75 件が入る', ds.length === 75, ds.length);
+      const gohan = ds.find((d) => d.name === 'ごはん');
+      ok('ごはん 160g は 250kcal', window.Nutri.round('kcal', window.Dishes.sumOf(gohan).values.kcal) === 250, window.Nutri.round('kcal', window.Dishes.sumOf(gohan).values.kcal));
       const dm = {}; ds.forEach((d) => { dm[d.id] = d; });
       const rec = await window.Menu.get(today);
       const lunch = window.Menu.sumCell(window.Menu.cellDishes(rec, 'l', 'jo'), dm);
@@ -180,7 +158,8 @@
       const tg = window.Menu.targetOf('jo');
       ok('給与栄養目標量が引ける（1500kcal）', tg && tg.energy === 1500, tg && tg.energy);
       ok('目標と見比べて判定が出る', ['low', 'ok', 'high'].indexOf(window.Nutri.judge(tg.target, 'kcal', dayAll.values.kcal)) >= 0);
-      ok('アレルギーが献立から拾える', window.Menu.allergensOf(window.Menu.cellDishes(rec, 'l', 'jo'), dm).indexOf('豚肉') >= 0);
+      ok('アレルギーが献立から拾える', window.Menu.allergensOf(window.Menu.cellDishes(rec, 'l', 'jo'), dm).length > 0,
+        window.Menu.allergensOf(window.Menu.cellDishes(rec, 'l', 'jo'), dm));
       ok('未測定の成分は合計に足さない', Object.keys(dayAll.missing).length >= 0);
     }
 
@@ -234,7 +213,8 @@
       ok('欠食の人は出ない（高橋さんは昼が受診）', !M.restrictionsAt(res, { d: today, m: 'l' }, m2, ['鶏肉']).some((x) => x.r.name === '高橋 キヨ'));
       // 献立から出る物の言葉
       const ds2 = await window.Dishes.all(); const dm2 = {}; ds2.forEach((d) => { dm2[d.id] = d; });
-      const w = window.Menu.wordsOf([{ dishId: 'd_nikujaga' }], dm2);
+      const nj = ds2.find((d) => d.name === '肉じゃが');
+      const w = window.Menu.wordsOf([{ dishId: nj.id }], dm2);
       ok('料理から材料名とアレルギー品目が言葉として出る', w.indexOf('肉じゃが') >= 0 && w.indexOf('豚肉') >= 0 && w.some((x) => x.indexOf('じゃがいも') >= 0), w.slice(0, 5));
     }
 
@@ -247,6 +227,30 @@
       ok('前後の行が同じ長さ', before.length === after.length && before.length === M.ROW_FIELDS.length);
       const changed = before.map((x, i) => x !== after[i]).filter(Boolean).length;
       ok('変わった所だけ違う（主食・副食・汁とろみ・注意）', changed === 4, { before: before, after: after });
+    }
+
+    // 初期データ
+    {
+      const S = window.Seed;
+      ok('初期データが読み込まれている（料理 75 件・サイクル 14 日）', S.available() && S.count() === 75 && S.cycleDays() === 14, [S.count(), S.cycleDays()]);
+      const before = (await window.Dishes.all()).length;
+      const r2 = await S.importDishes();
+      ok('二度押しても増えない（同じ名前は飛ばす）', r2.added === 0 && (await window.Dishes.all()).length === before, r2);
+      const seeded = (await window.Dishes.all()).find((d) => d.name === '筑前煮');
+      ok('初期データの料理に材料と食品番号が入っている', !!(seeded && seeded.items.length >= 5 && /^[0-9]{5}$/.test(seeded.items[0].no)), seeded && seeded.items[0]);
+      const kcal = seeded ? window.Nutri.round('kcal', window.Dishes.sumOf(seeded).values.kcal) : 0;
+      ok('初期データの料理から栄養価が出る（筑前煮 80〜200kcal）', kcal > 80 && kcal < 200, kcal);
+      ok('同じ名前の料理は 1 件だけ', (await window.Dishes.all()).filter((d) => d.name === '肉じゃが').length === 1);
+      // サイクル献立
+      const st = M.addDays(today, 30);
+      const r3 = await S.importCycle(st, 'jo', false);
+      ok('サイクル献立が 14 日分入る', r3.days === 14 && r3.filled > 0 && !r3.missing.length, r3);
+      const rec2 = await window.Menu.get(st);
+      const dm3 = {}; (await window.Dishes.all()).forEach((d) => { dm3[d.id] = d; });
+      const dayK = window.Nutri.round('kcal', window.Menu.sumDay(rec2, M.activeMeals(m2), 'jo', dm3).values.kcal);
+      ok('サイクル献立 1 日目が 1200〜1600kcal', dayK > 1200 && dayK < 1600, dayK);
+      const r4 = await S.importCycle(st, 'jo', false);
+      ok('二度目は既にある献立を残す', r4.filled === 0 && r4.kept > 0, r4);
     }
 
     // 全画面が例外なく描ける

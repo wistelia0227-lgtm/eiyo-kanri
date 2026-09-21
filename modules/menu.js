@@ -233,6 +233,9 @@
           }));
         }))));
     root.appendChild(h('div', { class: 'scroll-x' }, table));
+    if (!Object.keys(dishMap).length && window.Seed && window.Seed.available()) root.appendChild(h('div', { class: 'card info no-print' },
+      '料理がまだありません。初期データを入れると、料理 ' + window.Seed.count() + ' 件と ' + window.Seed.cycleDays() + ' 日分のサイクル献立がすぐ使えます。 ',
+      h('button', { class: 'btn primary', onclick: () => window.Seed.dialog() }, '初期データを入れる')));
     root.appendChild(h('div', { class: 'sub' }, '青＝目標の下限より少ない　赤＝上限より多い。マスを押すと料理を足せます。'));
 
     // 期間の平均（栄養出納の代わり）

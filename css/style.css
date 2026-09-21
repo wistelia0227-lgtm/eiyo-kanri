@@ -162,3 +162,6 @@ table.beforeafter tr.after td { font-weight: 600; }
 table.beforeafter td.changed { background: var(--warnbg); color: var(--bad); font-weight: 700; }
 
 table.menu td.menucell.hit { box-shadow: inset 3px 0 0 var(--bad); }
+
+table.foods tbody th { white-space: normal; min-width: 7rem; }
+table.foods td.ing { white-space: normal; min-width: 16rem; max-width: 26rem; font-size: .82rem; }

@@ -144,13 +144,21 @@
       const rows = all.filter((d) => (!kind || d.kind === kind) && (!q.trim() || (d.name + d.kana).indexOf(q.trim()) >= 0))
         .sort((a, b) => (a.kind || '').localeCompare(b.kind || '', 'ja') || (a.kana || a.name).localeCompare(b.kana || b.name, 'ja'));
       box.innerHTML = '';
-      if (!rows.length) { box.appendChild(h('div', { class: 'empty' }, all.length ? '見つかりません。' : 'まだ料理がありません。右上から登録します。材料と重量を入れると栄養価が出ます。')); return; }
+      if (!rows.length) {
+        box.appendChild(h('div', { class: 'empty' }, all.length ? '見つかりません。' : 'まだ料理がありません。'));
+        if (!all.length && window.Seed && window.Seed.available()) box.appendChild(h('div', { class: 'card info' },
+          h('h3', null, 'まず初期データを入れますか'),
+          h('p', null, '高齢者施設でよく出る料理 ' + window.Seed.count() + ' 件と、' + window.Seed.cycleDays() + ' 日分のサイクル献立が入っています。材料は成分表の食品番号なので、入れた時点で栄養価が出ます。'),
+          h('button', { class: 'btn primary big', onclick: () => window.Seed.dialog() }, '初期データを入れる'),
+          h('div', { class: 'sub' }, 'あとから 設定 → 初期データ でも入れられます。右上の「＋ 料理を登録」で自分で作ることもできます。')));
+        return;
+      }
       box.appendChild(h('div', { class: 'scroll-x' }, h('table', { class: 'grid foods' },
         h('thead', null, h('tr', null, h('th', null, '区分'), h('th', null, '料理名'), h('th', null, '材料'), keys.map((k) => h('th', null, Foods.nutrient(k).name, h('div', { class: 'wd' }, Foods.nutrient(k).unit))), h('th', { class: 'no-print' }))),
         h('tbody', null, rows.map((d) => {
           const per = D.sumOf(d);
           return h('tr', null, h('td', { class: 'sub' }, d.kind), h('th', null, d.name, d.allergy.length ? h('div', { class: 'tag bad' }, d.allergy.join('・')) : null),
-            h('td', { class: 'sub' }, d.items.map((it) => it.name + (it.g ? ' ' + it.g + 'g' : '')).join('、')),
+            h('td', { class: 'sub ing' }, d.items.map((it) => Foods.shortName(it.name) + (it.g ? ' ' + it.g + 'g' : '')).join('、')),
             keys.map((k) => h('td', { class: per.missing[k] ? 'est' : '' }, N.fmt(k, per.values[k]))),
             h('td', { class: 'no-print' }, h('button', { class: 'btn small', onclick: () => D.edit(d) }, '直す')));
         })))));
