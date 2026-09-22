@@ -31,7 +31,7 @@
   N.MEETING_ITEMS = ['食事の形態・とろみ、補助食の活用', '食事の周囲環境', '食事の介助の方法', '口腔のケアの方法', '医療又は歯科医療受療の必要性'];
 
   // 期限の既定（設定で変えられる）。中リスクは通知に数値が無く、施設が計画書に定める
-  N.DEFAULT_INTERVALS = { low: 90, mid: 30, high: 14, rescreen: 90, firstWithin: 7 };
+  N.DEFAULT_INTERVALS = { low: 90, mid: 30, high: 14, rescreen: 90, firstWithin: 7, planReview: 90 };
   N.intervals = function (masters) { return Object.assign({}, N.DEFAULT_INTERVALS, (masters && masters.ncm) || {}); };
 
   N.empty = function (residentId, date) {
@@ -127,12 +127,46 @@
       (a.resident.unit + a.resident.room).localeCompare(b.resident.unit + b.resident.room, 'ja'));
   };
 
-  // 計画書（様式4-1-2）
+  // 計画書（様式4-1-2）。分類は様式の選択肢
   N.PLAN_CATEGORIES = ['栄養補給・食事', '栄養食事相談', '経口移行の支援', '経口維持の支援', '多職種による課題の解決'];
+  // 算定加算のチェック欄（様式4-1-2 の「算定加算」）
+  N.PLAN_ADDONS = [
+    { id: 'kyoka', label: '栄養マネジメント強化加算' },
+    { id: 'ikou', label: '経口移行加算' },
+    { id: 'iji1', label: '経口維持加算（Ⅰ）' },
+    { id: 'iji2', label: '経口維持加算（Ⅱ）' },
+    { id: 'ryoyo', label: '療養食加算' }
+  ];
   N.emptyPlan = function (residentId, date) {
-    return { id: '', residentId: residentId, createdAt: date, updatedAt: date, author: '',
-      wish: '', explainedAt: '', needs: '', level: '', longGoal: '', longTerm: '',
-      rows: [], special: '', addons: [] };
+    return { id: '', residentId: residentId, firstAt: date, updatedAt: date, author: '',
+      wish: '', explainedAt: '', explainedBy: '', needs: '', level: '',
+      longGoal: '', longTerm: '', rows: [], special: '', addons: [], progress: [],
+      recordedAt: 0 };
+  };
+  N.normalizePlan = function (p) {
+    const e = N.emptyPlan(p.residentId, p.updatedAt || p.firstAt);
+    const out = Object.assign(e, p);
+    out.rows = (p.rows || []).map((r) => Object.assign({ cat: '', goal: '', term: '', care: '', freq: '', who: '' }, r));
+    out.addons = p.addons || [];
+    out.progress = (p.progress || []).map((x) => Object.assign({ date: '', text: '', by: '' }, x));
+    return out;
+  };
+  // 計画を見直す（前の版を写して新しい版を作る）。経過記録は引き継がない（新しい用紙になる）
+  N.revisePlan = function (prev, date) {
+    const p = N.normalizePlan(JSON.parse(JSON.stringify(prev)));
+    p.id = ''; p.updatedAt = date; p.recordedAt = 0;
+    p.explainedAt = ''; p.progress = [];
+    return p;
+  };
+  // 計画の状態。返り値 { has, current, staleDays, needsReview }
+  N.planState = function (plans, residentId, masters, today) {
+    const mine = (plans || []).filter((p) => p.residentId === residentId)
+      .sort((a, b) => (a.updatedAt || '').localeCompare(b.updatedAt || '') || (a.recordedAt || 0) - (b.recordedAt || 0));
+    const cur = mine[mine.length - 1] || null;
+    const iv = N.intervals(masters);
+    const days = cur ? M.dayNum(today) - M.dayNum(cur.updatedAt) : null;
+    return { has: !!cur, current: cur, all: mine, staleDays: days,
+      needsReview: !cur || days >= (iv.planReview || 90) };
   };
 
   if (typeof module !== 'undefined' && module.exports) module.exports = N;

@@ -49,6 +49,25 @@
     [0, 1, 2].forEach((i) => [0, -2].forEach((k) => rs.push({ id: list[i].id + '_' + day(k), residentId: list[i].id, date: day(k), mark: i === 0 && k === 0 ? 'oo' : 'o', meal: 'l', staple: i === 0 ? 5 : 10, side: i === 0 ? 4 : 9, note: i === 0 && k === 0 ? '汁物でむせ込み 2 回。きざみへの変更を看護師と相談。' : '', recordedAt: now })));
     await DB.putMany('rounds', rs);
 
+    // 栄養ケア計画書（様式4-1-2）
+    const plans = [{
+      id: U.uid('p'), residentId: list[0].id, firstAt: day(-30), updatedAt: day(-30), author: '栄養 花子',
+      wish: '好きな物を安全に食べたい（本人）。食事量が減っているのが心配（長女）。', explainedAt: day(-29), explainedBy: '栄養 花子',
+      needs: '体重減少が続いている。汁物でむせ込みがあり、食形態の調整が必要。', level: 'high',
+      longGoal: '体重を維持し、むせ込みなく食事ができる', longTerm: '6か月',
+      rows: [
+        { cat: '栄養補給・食事', goal: '体重の減少を止める', term: '3か月', care: '栄養補助食品を1日1個提供する', freq: '毎日15時', who: '管理栄養士' },
+        { cat: '経口維持の支援', goal: 'むせ込みなく食事ができる', term: '3か月', care: '食形態・とろみを状態に合わせて見直す', freq: '随時', who: '管理栄養士・看護職員' },
+        { cat: '多職種による課題の解決', goal: '低栄養リスクを高から中にする', term: '6か月', care: '月1回体重を測定し、多職種で共有する', freq: '月1回', who: '看護職員' }
+      ],
+      special: '家族の面会時に嗜好を聞き取る。', addons: ['kyoka'],
+      progress: [
+        { date: day(-20), text: '高カロリーゼリーの提供を開始。全量摂取できている。', by: '栄養 花子' },
+        { date: day(-7), text: '昼食の汁物でむせ込み2回。看護師と相談し、薄いとろみを付けることとした。', by: '栄養 花子' }
+      ], recordedAt: now
+    }];
+    await DB.putMany('plans', plans);
+
     // 栄養ケア・マネジメントの記録（様式4-1-1）
     const NC = window.NCM;
     const ncRec = (r, date, o) => NC.normalize(Object.assign(NC.empty(r.id, date), { id: U.uid('n'), by: '栄養 花子', recordedAt: now }, o));
@@ -142,6 +161,23 @@
       ok('山田さんの自動判定は高リスク', al.level === 'high', al.reasons);
     }
 
+    // 栄養ケア計画書
+    {
+      const NC = window.NCM, pl = await window.CarePlan.all();
+      ok('見本の計画書が 1 件', pl.length === 1, pl.length);
+      const y5 = res.find((r) => r.name === '山田 ハナ');
+      const st = NC.planState(pl, y5.id, m2, today);
+      ok('計画書がある人は has = true、短期目標 3 行', st.has && st.current.rows.length === 3, st.has);
+      ok('経過記録が 2 件', st.current.progress.length === 2);
+      ok('見直しの目安（90日）はまだ来ていない', !st.needsReview, st.staleDays);
+      const st2 = NC.planState(pl, res.find((r) => r.name === '佐藤 正一').id, m2, today);
+      ok('計画書が無い人は needsReview = true', !st2.has && st2.needsReview);
+      const rev = NC.revisePlan(st.current, today);
+      ok('見直し: 中身は引き継ぎ、説明日と経過記録は空になる', rev.rows.length === 3 && rev.explainedAt === '' && rev.progress.length === 0 && rev.id === '');
+      ok('見直し: 元の版を壊さない', st.current.progress.length === 2 && st.current.explainedAt);
+      ok('計画の分類 5・算定加算 5', NC.PLAN_CATEGORIES.length === 5 && NC.PLAN_ADDONS.length === 5);
+    }
+
     // 栄養計算
     if (window.Nutri && window.Nutri.loaded()) {
       ok('成分表が読み込まれている', window.Nutri.count() === 2538, window.Nutri.count());
@@ -181,10 +217,12 @@
     // やること一覧
     {
       const built = await window.Board.build(today);
-      ok('やること一覧に列が 4 つ（食事情報・栄養ケア・体重・ラウンド）', built.cols.length === 4, built.cols.map((c) => c.label));
+      ok('やること一覧に列が 5 つ（食事情報・栄養ケア・計画書・体重・ラウンド）', built.cols.length === 5, built.cols.map((c) => c.label));
       ok('やること一覧の行は在籍者の数', built.rows.length === res.filter((r) => M.status(r, today, m2.meals) === 'in').length, built.rows.length);
       const y2 = built.rows.find((x) => x.resident.name === '山田 ハナ');
       ok('山田さんの栄養ケアのセルは期限切れ', y2.cells[1].state === 'over', y2.cells[1]);
+      ok('山田さんの計画書のセルは作成済み', y2.cells[2].state === 'ok', y2.cells[2]);
+      ok('計画書が無い人のセルは赤', built.rows.find((x) => x.resident.name === '佐藤 正一').cells[2].state === 'over');
       const sh = built.rows.find((x) => x.resident.name === '渡辺 茂');
       ok('ショートの人の栄養ケアは対象外', sh.cells[1].state === 'none', sh.cells[1]);
       ok('セルを押す動きが付いている', typeof y2.cells[1].onclick === 'function');
@@ -267,7 +305,7 @@
     // 全画面が例外なく描ける
     for (const name of Object.keys(App.screens)) {
       const box = h('div'); let err = null;
-      try { await App.screens[name](name === 'resident' ? [y.id] : [], box); } catch (e) { err = e.message; }
+      try { await App.screens[name]((name === 'resident' || name === 'plan') ? [y.id] : [], box); } catch (e) { err = e.message; }
       ok('画面「' + name + '」が描ける', !err && box.childNodes.length > 0, err);
     }
     const bad = results.filter((r) => !r.ok).length;

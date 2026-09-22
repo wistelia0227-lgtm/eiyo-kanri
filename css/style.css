@@ -171,3 +171,13 @@ table.foods td.ing { white-space: normal; min-width: 16rem; max-width: 26rem; fo
 .pickitem.on { background: var(--infobg); }
 .btn.seg.small { padding: .15rem .5rem; font-size: .85rem; }
 .no-wrap-scroll { overflow-x: auto; flex-wrap: nowrap; }
+
+/* 様式の形（計画書） */
+.form4 { background: #fff; border: 1px solid var(--line); border-radius: 8px; padding: 1rem 1.2rem; }
+.form-title { text-align: center; font-size: 1.15rem; margin: 0 0 .8rem; }
+table.form-head, table.form-body { border-collapse: collapse; width: 100%; margin-bottom: .6rem; }
+table.form-head th, table.form-head td, table.form-body th, table.form-body td { border: 1px solid #6b7280; padding: .35rem .5rem; text-align: left; vertical-align: top; font-size: .92rem; }
+table.form-head th, table.form-body th { background: var(--head); white-space: nowrap; font-weight: 600; }
+table.form-body td { min-height: 1.8rem; }
+table.form-body .w-date { width: 6rem; } table.form-body .w-who { width: 7rem; }
+table.plan-rows td { vertical-align: top; } table.plan-rows textarea { min-width: 12rem; }
