@@ -81,6 +81,7 @@
       listEditor('thick', 'とろみ', []), listEditor('portion', '量', []), listEditor('assist', '介助', []), listEditor('cond', '条件つきの指示の「条件」', []),
       listEditor('extraRows', '利用者以外の食事（食数表に足す行）', M.activeMeals(m).map((ml) => ({ key: ml.id, label: ml.label + 'の既定数', type: 'number',
         get: (it) => (it.def && it.def[ml.id]) || 0, set: (it, v) => { it.def = it.def || {}; it.def[ml.id] = v; } })), '毎日ほぼ同じ数なら既定数を入れておきます。日ごとの数は「今日」や食数の日別画面で直せます。'),
+      textListEditor('dishKinds', '料理の区分（主食・主菜など）'), textListEditor('dishMains', '料理の主材料'), textListEditor('dishMethods', '料理の調理法'),
       textListEditor('units', V.t('place')), textListEditor('tools', '食器・自助具'), textListEditor('allergens', 'アレルギーの候補'),
       textListEditor('sources', '指示・依頼した人'), textListEditor('absenceReasons', '欠食の理由'));
   } });

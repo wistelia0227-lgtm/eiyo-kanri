@@ -241,6 +241,17 @@
       const kcal = seeded ? window.Nutri.round('kcal', window.Dishes.sumOf(seeded).values.kcal) : 0;
       ok('初期データの料理から栄養価が出る（筑前煮 80〜200kcal）', kcal > 80 && kcal < 200, kcal);
       ok('同じ名前の料理は 1 件だけ', (await window.Dishes.all()).filter((d) => d.name === '肉じゃが').length === 1);
+      // 区分
+      const ds4 = await window.Dishes.all();
+      ok('全部の料理に主材料と調理法が付いている', ds4.every((d) => d.main && d.method), ds4.filter((d) => !d.main || !d.method).map((d) => d.name));
+      ok('区分は マスタの並びに収まっている', ds4.every((d) => m2.dishMains.indexOf(d.main) >= 0 && m2.dishMethods.indexOf(d.method) >= 0),
+        ds4.filter((d) => m2.dishMains.indexOf(d.main) < 0).map((d) => d.main));
+      const byKind = {}; ds4.forEach((d) => { byKind[d.kind] = (byKind[d.kind] || 0) + 1; });
+      ok('区分ごとに料理がある（主食・汁物・主菜・副菜・デザート・飲み物）', Object.keys(byKind).length === 6 && byKind['主菜'] >= 20, byKind);
+      const fish = ds4.filter((d) => d.main === '魚');
+      ok('主材料で絞れる（魚は 9 件）', fish.length === 9, fish.length);
+      const nimono = ds4.filter((d) => d.method === '煮る');
+      ok('調理法で絞れる（煮る は 15 件以上）', nimono.length >= 15, nimono.length);
       // サイクル献立
       const st = M.addDays(today, 30);
       const r3 = await S.importCycle(st, 'jo', false);

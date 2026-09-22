@@ -21,7 +21,7 @@
     const add = [], skip = [];
     sd.dishes.forEach((d) => {
       if (have[d.name]) { skip.push(d.name); return; }
-      add.push({ id: U.uid('d'), name: d.name, kana: '', kind: d.kind, servings: 1,
+      add.push({ id: U.uid('d'), name: d.name, kana: '', kind: d.kind, main: d.main || '', method: d.method || '', servings: 1,
         items: d.items.map((i) => ({ no: i.no, name: i.name, g: i.g })),
         allergy: d.allergy.slice(), memo: d.memo || '', seeded: true, updatedAt: Date.now() });
     });

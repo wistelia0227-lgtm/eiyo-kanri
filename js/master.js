@@ -53,6 +53,8 @@
     ncm: null,                // 栄養ケアの期限（js/ncm.js の DEFAULT_INTERVALS）
     nutrientKeys: null,      // 画面に出す栄養素（null = 基本の6つ）
     dishKinds: ['主食', '主菜', '副菜', '汁物', 'デザート', '飲み物'],
+    dishMains: ['米・パン・めん', '魚', '肉', '卵', '豆・豆腐', '野菜', 'いも', '海藻・きのこ', '乳', '果物'],
+    dishMethods: ['煮る', '焼く', '揚げる', '炒める', '蒸す', '和える', '汁', 'そのまま'],
     targets: {},             // 食種ID → { energy, age, sex, setAt } 給与栄養目標量
     // 情報リンク。設定で足す・消す・並べ替えができる
     links: null, // null = 既定のリンク集（LINKS）を使う

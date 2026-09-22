@@ -151,9 +151,10 @@
       box, sumBox,
       h('div', { class: 'toolrow' },
         h('button', { class: 'btn primary', onclick: async () => {
-          const d = await Dishes.pick();
-          if (!d) { redraw(); return; }
-          list().push({ dishId: d.id, name: d.name, x: 1 }); await save(); redraw();
+          const picked = await Dishes.pick({ multi: true });
+          if (!picked || !picked.length) { redraw(); return; }
+          picked.forEach((d) => list().push({ dishId: d.id, name: d.name, x: 1 }));
+          await save(); redraw();
         } }, '＋ 料理を足す'),
         h('button', { class: 'btn', onclick: async () => {
           const from = prompt('どの日からうつしますか（YYYY-MM-DD）', M.addDays(date, -7));
@@ -253,8 +254,26 @@
     const count = {};
     days.forEach((d) => meals.forEach((ml) => Menu.cellDishes(recs[d], ml.id, sId).forEach((c) => { count[c.dishId] = (count[c.dishId] || 0) + 1; })));
     const dup = Object.keys(count).filter((k) => count[k] > 1).sort((a, b) => count[b] - count[a]);
-    if (dup.length) root.appendChild(h('div', { class: 'card' }, h('b', null, 'この期間に 2 回以上出る料理: '),
-      dup.map((k) => h('span', { class: 'tag' }, (dishMap[k] || { name: '？' }).name + ' ' + count[k] + '回'))));
+    // 主材料・調理法の偏り（1 食を 1 回と数える）
+    const tally = { main: {}, method: {} };
+    days.forEach((d) => meals.forEach((ml) => Menu.cellDishes(recs[d], ml.id, sId).forEach((c) => {
+      const dd = dishMap[c.dishId]; if (!dd) return;
+      if (dd.main) tally.main[dd.main] = (tally.main[dd.main] || 0) + 1;
+      if (dd.method) tally.method[dd.method] = (tally.method[dd.method] || 0) + 1;
+    })));
+    const bar = (title, obj) => {
+      const keys = Object.keys(obj).sort((a, b) => obj[b] - obj[a]);
+      if (!keys.length) return null;
+      const max = obj[keys[0]];
+      return h('div', null, h('b', null, title),
+        h('div', { class: 'histo' }, keys.map((k) => h('div', { class: 'hbar' },
+          h('span', { class: 'hlabel' }, k), h('span', { class: 'hfill', style: 'width:' + (obj[k] / max * 60) + '%' }), h('span', null, obj[k] + '回')))));
+    };
+    root.appendChild(h('section', { class: 'card' }, h('h2', null, 'この期間の偏り'),
+      h('div', { class: 'grid2' }, bar('主材料', tally.main), bar('調理法', tally.method)),
+      dup.length ? h('div', null, h('b', null, '2 回以上出る料理: '),
+        dup.map((k) => h('span', { class: 'tag' }, (dishMap[k] || { name: '？' }).name + ' ' + count[k] + '回'))) : h('div', { class: 'sub' }, '同じ料理の繰り返しはありません。'),
+      h('div', { class: 'sub' }, '主材料・調理法は 料理マスタ の各料理に付けます（設定 → 呼び方（マスタ）で一覧を変えられます）。')));
   });
 
   App.registerNav({ order: 70, feature: 'menu', label: '献立', icon: '📅', hash: '#/menu', match: ['menu'] });
