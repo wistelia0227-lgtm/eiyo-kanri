@@ -192,6 +192,68 @@
     });
     return { target: t, band: band, energy: kcal, version: N.DRI_VERSION };
   };
+  // ---- 個人の必要栄養量 ----
+  // 施設によって出し方が違う（基礎代謝基準値を使う所、体重×係数の所、Harris-Benedict を使う所）。
+  // どれを使ったかを利用者ごとに残せるようにする。残さないと、あとで数字の根拠が分からなくなる。
+  N.WEIGHT_BASE = [
+    { id: 'actual', label: '実体重' },
+    { id: 'ideal', label: '標準体重（BMI 22）' },
+    { id: 'adjust', label: '調整体重（標準＋（実−標準）×0.25）' }
+  ];
+  N.NEED_METHODS = [
+    { id: 'bmr', label: '基礎代謝基準値 × 体重 × 身体活動レベル', note: '日本人の食事摂取基準の推定エネルギー必要量。施設ではこれが基本' },
+    { id: 'kg', label: '体重 × 係数（kcal/kg）', note: '25〜30 kcal/kg がよく使われる。手早く出したい時' },
+    { id: 'hb', label: 'Harris-Benedict × 活動係数 × ストレス係数', note: '病院・NST でよく使う。身長と年齢が要る' },
+    { id: 'manual', label: '手で入れる', note: '医師の指示など、計算に寄らない時' }
+  ];
+  N.idealWeight = function (heightCm) {
+    const hm = (Number(heightCm) || 0) / 100;
+    return hm > 0 ? Math.round(22 * hm * hm * 10) / 10 : null;
+  };
+  // 計算に使う体重を決める
+  N.weightFor = function (base, actualKg, heightCm) {
+    const a = Number(actualKg) || null;
+    if (base === 'ideal' || base === 'adjust') {
+      const ideal = N.idealWeight(heightCm);
+      if (!ideal) return a;
+      if (base === 'ideal') return ideal;
+      if (!a) return ideal;
+      return Math.round((ideal + (a - ideal) * 0.25) * 10) / 10;
+    }
+    return a;
+  };
+  N.emptyRule = function () {
+    return { method: 'bmr', weightBase: 'actual', palIndex: 1, kcalPerKg: 30, activity: 1.3, stress: 1.0,
+      kcal: null, protPerKg: 1.0, prot: null, setAt: '', by: '' };
+  };
+  // rule と本人の身体の値から、必要エネルギーとたんぱく質を出す
+  // o = { age, sex, weightKg, heightCm }
+  N.personalNeed = function (rule, o) {
+    const r = Object.assign(N.emptyRule(), rule || {});
+    const w = N.weightFor(r.weightBase, o.weightKg, o.heightCm);
+    const kcal = r.method === 'manual' ? (r.kcal == null ? null : Math.round(r.kcal))
+      : N.energyNeed({ age: o.age, sex: o.sex, weightKg: w, heightCm: o.heightCm,
+        method: r.method, palIndex: r.palIndex, kcalPerKg: r.kcalPerKg, activity: r.activity, stress: r.stress });
+    const prot = r.prot != null ? Math.round(r.prot * 10) / 10
+      : (w ? Math.round(w * (Number(r.protPerKg) || 1.0) * 10) / 10 : null);
+    return { rule: r, weightUsed: w, kcal: kcal, prot: prot,
+      // 出し方を 1 行で（様式に根拠として書ける形）
+      how: N.needHow(r, o, w, kcal) };
+  };
+  N.needHow = function (r, o, w, kcal) {
+    const band = N.ageBand(o.age);
+    const wb = (N.WEIGHT_BASE.find((x) => x.id === r.weightBase) || {}).label || '';
+    if (r.method === 'manual') return '手で入れた値';
+    if (!w) return '体重が無いので出せません';
+    if (r.method === 'kg') return wb + ' ' + w + 'kg × ' + (r.kcalPerKg || 30) + ' kcal/kg = ' + (kcal == null ? '—' : kcal) + ' kcal';
+    if (r.method === 'hb') return 'Harris-Benedict（' + wb + ' ' + w + 'kg・' + (o.heightCm || '—') + 'cm・' + (o.age == null ? '—' : o.age) + '歳）× 活動 ' +
+      (r.activity || 1.3) + ' × ストレス ' + (r.stress || 1.0) + ' = ' + (kcal == null ? '—' : kcal) + ' kcal';
+    if (!band) return '年齢が無いので出せません';
+    const pal = band.pal[r.palIndex != null ? r.palIndex : 1] || band.pal[0];
+    return '基礎代謝基準値 ' + band.bmr[o.sex === 'm' ? 'm' : 'f'] + ' × ' + wb + ' ' + w + 'kg × 身体活動レベル ' + pal +
+      ' = ' + (kcal == null ? '—' : kcal) + ' kcal（' + band.label + '・' + N.DRI_VERSION + '）';
+  };
+
   // 実際の値を基準と見比べる → 'low'（下限未満）/'high'（上限超え）/'ok'/null（基準なし）
   N.judge = function (target, key, value) {
     const r = target && target[key];

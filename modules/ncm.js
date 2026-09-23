@@ -184,7 +184,14 @@
           h('tbody', null,
             h('tr', null, h('td', null, '摂取栄養量'), h('td', null, f.inKcal), h('td', null, f.inProt)),
             h('tr', null, h('td', null, '提供栄養量'), h('td', null, f.outKcal), h('td', null, f.outProt)),
-            h('tr', null, h('td', null, '必要栄養量'), h('td', null, f.needKcal), h('td', null, f.needProt)))),
+            h('tr', null, h('td', null, '必要栄養量'), h('td', null, f.needKcal), h('td', null, f.needProt),
+              h('td', { class: 'no-print' }, window.Needs ? h('button', { class: 'btn small', onclick: async () => {
+                const got = await window.Needs.of(resident, date.value);
+                if (got.kcal == null) { U.toast('体重か生年月日が入っていないので出せません', true); return; }
+                r.nut.needKcal = got.kcal; f.needKcal.value = got.kcal;
+                if (got.prot != null) { r.nut.needProt = got.prot; f.needProt.value = got.prot; }
+                U.toast(got.how);
+              } }, '出し方から入れる') : null)))),
         h('div', { class: 'grid3' }, U.field('食事の形態（学会分類コード）', f.swCode), U.field('とろみ', f.swThick),
           U.field('嚥下調整食の必要性', h('div', null, chk(r.swallow, 'need', '必要あり')))),
         U.field('食事の留意事項', U.withPhrases('ncm.caution', f.cautionText)),

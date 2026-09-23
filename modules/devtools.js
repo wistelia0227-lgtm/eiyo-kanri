@@ -398,6 +398,37 @@
       m2.prices = [];
     }
 
+    // 個人別の必要栄養量
+    {
+      const y7 = res.find((r) => r.name === '山田 ハナ');
+      const got = await window.Needs.of(y7);
+      ok('既定（基礎代謝基準値×体重×身体活動レベル）で出る', got.kcal > 800 && got.kcal < 2000, [got.kcal, got.how]);
+      ok('たんぱく質は体重 × 1.0g が既定', got.prot != null && Math.abs(got.prot - got.weightUsed) < 0.05, [got.prot, got.weightUsed]);
+      ok('出し方が 1 行の文で残る', /基礎代謝基準値/.test(got.how), got.how);
+      // 体重 × 係数
+      const kgRule = { method: 'kg', weightBase: 'actual', kcalPerKg: 30, protPerKg: 1.2 };
+      const g2 = window.Nutri.personalNeed(kgRule, got.body);
+      ok('体重 × 30kcal で出せる', g2.kcal === Math.round(got.body.weightKg * 30), [g2.kcal, got.body.weightKg]);
+      ok('たんぱく質の係数も効く', Math.abs(g2.prot - got.body.weightKg * 1.2) < 0.06, g2.prot);
+      // 標準体重（BMI 22）
+      ok('標準体重は BMI 22 で出る（150cm → 49.5kg）', window.Nutri.idealWeight(150) === 49.5, window.Nutri.idealWeight(150));
+      ok('調整体重は 標準 +（実 − 標準）× 0.25', window.Nutri.weightFor('adjust', 39.5, 150) === 47, window.Nutri.weightFor('adjust', 39.5, 150));
+      ok('身長が無ければ実体重に戻る', window.Nutri.weightFor('ideal', 40, null) === 40);
+      // Harris-Benedict
+      const hb = window.Nutri.personalNeed({ method: 'hb', activity: 1.3, stress: 1.0 }, { age: 80, sex: 'f', weightKg: 50, heightCm: 150 });
+      const bee = 655.1 + 9.56 * 50 + 1.85 * 150 - 4.68 * 80;
+      ok('Harris-Benedict が式どおり', hb.kcal === Math.round(bee * 1.3), [hb.kcal, Math.round(bee * 1.3)]);
+      // 手入力
+      const man = window.Nutri.personalNeed({ method: 'manual', kcal: 1400, prot: 55 }, got.body);
+      ok('手で入れた値はそのまま', man.kcal === 1400 && man.prot === 55, man);
+      // 保存できる
+      const rec = await DB.get('residents', y7.id);
+      rec.energyRule = kgRule; await DB.put('residents', rec);
+      const again = await window.Needs.of(M.normalizeResident(await DB.get('residents', y7.id)));
+      ok('利用者に出し方が残る', again.rule.method === 'kg' && again.kcal === g2.kcal, [again.rule.method, again.kcal]);
+      rec.energyRule = null; await DB.put('residents', rec);
+    }
+
     // 常用量（目安量）
     {
       const Ax = window.Amounts;
