@@ -65,7 +65,19 @@
 App.start();
 // https か localhost で配った時だけ、オフラインでも開けるようにする（file:// では何もしない）
 if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) {
-  navigator.serviceWorker.register('sw.js').catch(function (e) { console.warn('sw', e); });
+  // updateViaCache: 'none' を付けないと、sw.js 自体がブラウザのキャッシュから読まれて
+  // 新しい版に気づかないことがある（GitHub Pages は sw.js にもキャッシュの寿命を付けるため）
+  navigator.serviceWorker.register('sw.js', { updateViaCache: 'none' }).then(function (reg) {
+    reg.update();
+    // 新しい版が入ったら、次に開いた時ではなく今すぐ入れ替える
+    reg.addEventListener('updatefound', function () {
+      var sw = reg.installing;
+      if (!sw) return;
+      sw.addEventListener('statechange', function () {
+        if (sw.state === 'activated' && navigator.serviceWorker.controller) location.reload();
+      });
+    });
+  }).catch(function (e) { console.warn('sw', e); });
 }
 </script>
 </body>

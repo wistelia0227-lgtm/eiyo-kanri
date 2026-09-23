@@ -1,4 +1,4 @@
-﻿// 繧ｪ繝輔Λ繧､繝ｳ縺ｧ髢九￠繧九ｈ縺・↓縺吶ｋ・・ttps 縺・localhost 縺ｧ驟阪▲縺滓凾縺縺醍匳骭ｲ縺輔ｌ繧具ｼ峨・// 逶ｴ縺励◆譎ゅ・ VERSION 繧剃ｸ翫￡繧九ょ商縺・沿縺ｮ繝輔ぃ繧､繝ｫ縺ｯ activate 縺ｧ豸医∴繧九・const VERSION = 'v0.14';
+﻿// 繧ｪ繝輔Λ繧､繝ｳ縺ｧ髢九￠繧九ｈ縺・↓縺吶ｋ・・ttps 縺・localhost 縺ｧ驟阪▲縺滓凾縺縺醍匳骭ｲ縺輔ｌ繧具ｼ峨・// 逶ｴ縺励◆譎ゅ・ VERSION 繧剃ｸ翫￡繧九ょ商縺・沿縺ｮ繝輔ぃ繧､繝ｫ縺ｯ activate 縺ｧ豸医∴繧九・const VERSION = 'v0.15';
 const FILES = [
   './', './index.html', './css/style.css',
   './js/util.js', './js/model.js', './js/db.js', './js/profile.js',
