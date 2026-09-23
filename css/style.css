@@ -198,3 +198,14 @@ svg.chart .ref { stroke: #f59e0b; stroke-width: 1; stroke-dasharray: 4 3; }
 svg.chart .line { fill: none; stroke: var(--primary); stroke-width: 2; }
 svg.chart .dot { fill: var(--primary); } svg.chart .dot.low { fill: var(--info); } svg.chart .dot.high { fill: var(--bad); }
 svg.chart .axis { font-size: 10px; fill: var(--sub); }
+
+/* 帳票（modules/report.js・modules/journal.js） */
+.card .sub-card { background: var(--bg); border: 1px solid var(--line); border-radius: 8px; padding: .5rem .7rem; margin: .5rem 0; }
+.sub-card h3 { margin: 0 0 .3rem; font-size: .95rem; }
+.segrow { display: flex; flex-wrap: wrap; gap: .25rem; }
+td.j-done { color: var(--ok); font-weight: 700; }   /* 検食簿の一覧: つけてある日の ○ */
+table.list.small th, table.list.small td { font-size: .8rem; padding: .15rem .3rem; }
+table.stamps { border-collapse: collapse; margin-top: 6mm; }
+table.stamps th, table.stamps td { border: 1px solid var(--line); padding: .2rem .6rem; min-width: 22mm; text-align: center; font-weight: 400; font-size: .8rem; }
+table.stamps td { height: 14mm; }
+@media print { .print-only table.stamps, table.stamps.print-only { display: table; } }

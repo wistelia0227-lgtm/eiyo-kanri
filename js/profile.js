@@ -80,6 +80,7 @@
     { id: 'rounds', label: 'ミールラウンド', desc: '食事の観察の記録（○◎）と週3回の確認' },
     { id: 'ncm', label: '栄養ケア・マネジメント', desc: '様式4-1-1 の記録、期限の管理、前回複写' },
     { id: 'menu', label: '献立・栄養計算', desc: '料理マスタ、献立、栄養価と給与栄養目標量' },
+    { id: 'reports', label: '給食の帳票', desc: '食品構成表、栄養出納表（月報）、栄養管理報告書、検食簿、給食日誌' },
     { id: 'links', label: '情報リンク', desc: '制度・食品・掲示板などのリンク集' }
   ];
 
@@ -92,6 +93,7 @@
     (profile.kinds || []).forEach((id) => { const k = P.kind(id); if (k) { k.feat.forEach((f) => { on[f] = true; }); if (k.ncm) on.ncm = true; } });
     (profile.addons || []).forEach((id) => { const a = P.ADDONS.find((x) => x.id === id); if (a) a.feat.forEach((f) => { on[f] = true; }); });
     on.links = true;
+    if (on.census) on.reports = true; // 食事を出す施設は、保健所に出す帳票（食品構成表・検食簿など）を持つ
     // 直営なら献立を自分で作る。委託・完調品・配食でも、栄養価の確認に使えるので推奨から外さない
     if (!profile.supply || profile.supply === 'direct') on.menu = true;
     // 献立が外から来る施設でも、食数と食札は施設側に残る（調査 03）。ここでは機能を減らさない

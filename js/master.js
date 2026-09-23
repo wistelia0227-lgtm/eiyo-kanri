@@ -73,6 +73,9 @@
     dishMains: ['米・パン・めん', '魚', '肉', '卵', '豆・豆腐', '野菜', 'いも', '海藻・きのこ', '乳', '果物'],
     dishMethods: ['煮る', '焼く', '揚げる', '炒める', '蒸す', '和える', '汁', 'そのまま'],
     targets: {},             // 食種ID → { energy, age, sex, setAt } 給与栄養目標量
+    foodComp: {},            // 食種ID → { 群ID: g } 食品構成表の目標（1人1日当たり）
+    reportInfo: null,        // 栄養管理報告書の表面（modules/report.js）
+    journalForm: null,       // 検食簿・給食日誌の欄立て（modules/journal.js）
     // 情報リンク。設定で足す・消す・並べ替えができる
     links: null, // null = 既定のリンク集（LINKS）を使う
     // 使っているデータの版と、最新かどうかを人が確かめた日

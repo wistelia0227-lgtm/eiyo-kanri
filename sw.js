@@ -5,7 +5,7 @@
 //  - 画面と JavaScript・CSS は「まずネット、だめならキャッシュ」。直した版がすぐ届く
 //  - 大きくて変わらないもの（成分表 1MB、初期データ、LIFE の項目定義、アイコン）は「まずキャッシュ」。速さ優先。
 //    こちらは VERSION を上げた時に入れ替わる
-const VERSION = 'v0.16';
+const VERSION = 'v0.17';
 const FILES = [
   './', './index.html', './css/style.css',
   './js/util.js', './js/model.js', './js/db.js', './js/profile.js',

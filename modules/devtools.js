@@ -345,6 +345,44 @@
       ok('表示のプリセットが 3 つある', m2.nutrientPresets.length === 3 && m2.nutrientPresets[0].name === '栄養士', m2.nutrientPresets.map((p) => p.name));
     }
 
+    // 帳票（食品構成表・栄養出納表・栄養管理報告書）
+    {
+      const Rx = window.Report, FGx = window.FoodGroup;
+      const st = M.addDays(today, 30);           // 上で 14 日分のサイクル献立を入れた日
+      const days = []; for (let i = 0; i < 14; i++) days.push(M.addDays(st, i));
+      const g = await Rx.gather(days, 'jo');
+      ok('献立から 14 日ぶん集まる', g.filled === 14, g.filled);
+      ok('1 人 1 日平均の穀類（ごはん）が 300〜500g（1 食 160g ×3 食、パン・めんの日を含む平均）', g.avgGroup.g.rice > 300 && g.avgGroup.g.rice < 500, Math.round(g.avgGroup.g.rice));
+      ok('緑黄色野菜が 1 日 30g 以上ある', g.avgGroup.g.gvege >= 30, Math.round(g.avgGroup.g.gvege));
+      ok('群の分からない材料は無い', g.avgGroup.unknown === 0, g.avgGroup.unknown);
+      const sumG = FGx.ids().reduce((s2, k) => s2 + (g.avgGroup.g[k] || 0), 0);
+      ok('群ごとの合計が総重量と合う', Math.abs(sumG + g.avgGroup.unknown - g.avgGroup.total) < 0.01, [sumG, g.avgGroup.total]);
+      const dayK2 = window.Nutri.round('kcal', g.avgGroup && g.avgNut.values.kcal);
+      ok('1 日平均のエネルギーが献立と同じ桁（1200〜1600kcal）', dayK2 > 1200 && dayK2 < 1600, dayK2);
+      ok('月の日数が出せる（2026-02 は 28 日）', Rx.daysOf('2026-02').length === 28, Rx.daysOf('2026-02').length);
+      ok('うるう年も合う（2028-02 は 29 日）', Rx.daysOf('2028-02').length === 29, Rx.daysOf('2028-02').length);
+      ok('前月・次月に動ける', Rx.addMonth('2026-01', -1) === '2025-12' && Rx.addMonth('2026-12', 1) === '2027-01',
+        [Rx.addMonth('2026-01', -1), Rx.addMonth('2026-12', 1)]);
+    }
+
+    // 検食簿・給食日誌
+    {
+      const Jx = window.Journal;
+      const form = Jx.form();
+      ok('検食簿の欄が 7 つ（うち所見は自由記入）', form.kenshoku.length === 7 && form.kenshoku[6].kind === 'text', form.kenshoku.length);
+      ok('5 段階の言葉がある', form.scale.length === 5 && form.scale[0] === '良い', form.scale);
+      ok('検印欄が 3 つ', form.stamps.length === 3, form.stamps);
+      const rec = await Jx.get(today);
+      ok('まだ書いていない日は未記入', !Jx.done(rec, 'l'));
+      rec.kenshoku.l = { at: '11:30', by: '施設長', values: { amount: '良い' } };
+      await Jx.save(rec);
+      const rec2 = await Jx.get(today);
+      ok('検食簿が保存される', Jx.done(rec2, 'l') && rec2.kenshoku.l.by === '施設長', rec2.kenshoku.l);
+      ok('同じ日の食数の手入力（extra）は消えない', rec2.extra !== undefined);
+      const ph = window.Phrases.get(m2, 'journal.kenshoku');
+      ok('検食簿の文例が入っている', ph.length >= 5, ph.length);
+    }
+
     // 全画面が例外なく描ける
     for (const name of Object.keys(App.screens)) {
       const box = h('div'); let err = null;
