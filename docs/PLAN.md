@@ -165,6 +165,10 @@ v0.7 で追加:
 - **PWA を用意した**（`manifest.webmanifest` / `sw.js` / `icons/`）。https か localhost の時だけ Service Worker を登録する。
   実測で登録とキャッシュ作成を確認。https の置き場所が決まれば「ホーム画面に追加」とオフライン動作ができる
 - `スマホで試す.bat`（= `tools/serve.py`、ポート 8766）で、同じ Wi-Fi のスマホからすぐ試せる
+- **公開した**: https://wistelia0227-lgtm.github.io/eiyo-kanri/ （リポジトリ `wistelia0227-lgtm/eiyo-kanri`）。
+  公開 URL で自己テスト 99/99、secure context・Service Worker 登録・キャッシュ作成を確認。
+  置いてあるのはアプリ本体だけで、入力したデータは端末のブラウザの中に残る（どこにも送られない）。
+  直したら push すれば反映される。`sw.js` の VERSION を上げるのを忘れない
 
 ## 2. 設計の核
 
