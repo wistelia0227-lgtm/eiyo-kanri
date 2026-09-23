@@ -365,6 +365,34 @@
         [Rx.addMonth('2026-01', -1), Rx.addMonth('2026-12', 1)]);
     }
 
+    // 予定献立表・調理指示書・発注書
+    {
+      const Kx = window.Kondate;
+      const st = M.addDays(today, 30);
+      const un = await Kx.unfold(st);
+      ok('献立が 食種 × 食事 × 料理 × 材料 にほどける', un.rows.length >= 1 && un.rows[0].cells.length === 3, un.rows.map((r) => r.sh.id + ':' + r.cells.length));
+      const cell = un.rows[0].cells[0];
+      ok('その食種のその食事の食数が付く', cell.n >= 1, cell.n);
+      const gohan = cell.dishes.find((d) => d.dish && d.dish.name === 'ごはん');
+      ok('1 人分の材料の重さが出る（ごはん 160g）', gohan && Math.round(gohan.items[0].g1) === 160, gohan && gohan.items.map((i) => i.name + ':' + i.g1));
+      // 食種展開
+      await window.Menu.get(st);
+      const before = window.Menu.cellDishes(await window.Menu.get(st), 'l', 'dm').length;
+      const recX = await window.Menu.get(st);
+      recX.cells[window.Menu.cellKey('l', 'dm')] = JSON.parse(JSON.stringify(window.Menu.cellDishes(recX, 'l', 'jo')));
+      await DB.put('menus', recX);
+      const after = window.Menu.cellDishes(await window.Menu.get(st), 'l', 'dm').length;
+      ok('別の食種に献立を写せる', before === 0 && after > 0, [before, after]);
+      // 発注（単価）
+      m2.prices = [{ no: '01088', name: 'めし', spec: '5kg 袋', packG: 5000, yen: 2800, vendor: '米屋' }];
+      const o1 = Kx.orderOf('01088', 12000);
+      ok('必要量から発注数を切り上げる（12kg → 5kg 袋 3 個）', o1.packs === 3 && o1.yen === 8400, [o1.packs, o1.yen]);
+      const o2 = Kx.orderOf('99999', 100);
+      ok('単価が無い食材は金額を出さない', o2.packs === null && o2.yen === null, o2);
+      ok('重さの表示が kg に切り替わる', Kx.g(950) === '950 g' && Kx.g(1500) === '1.50 kg', [Kx.g(950), Kx.g(1500)]);
+      m2.prices = [];
+    }
+
     // 検食簿・給食日誌
     {
       const Jx = window.Journal;

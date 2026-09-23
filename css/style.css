@@ -209,3 +209,8 @@ table.stamps { border-collapse: collapse; margin-top: 6mm; }
 table.stamps th, table.stamps td { border: 1px solid var(--line); padding: .2rem .6rem; min-width: 22mm; text-align: center; font-weight: 400; font-size: .8rem; }
 table.stamps td { height: 14mm; }
 @media print { .print-only table.stamps, table.stamps.print-only { display: table; } }
+
+/* 予定献立表・調理指示書（modules/kondate.js） */
+table.kondate th.dishname { text-align: left; white-space: nowrap; vertical-align: top; background: var(--head); }
+table.kondate td.shiji { vertical-align: top; font-size: .85rem; white-space: pre-wrap; min-width: 12em; }
+table.list td.num, table.list th.num { text-align: right; white-space: nowrap; }

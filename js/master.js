@@ -74,6 +74,7 @@
     dishMethods: ['煮る', '焼く', '揚げる', '炒める', '蒸す', '和える', '汁', 'そのまま'],
     targets: {},             // 食種ID → { energy, age, sex, setAt } 給与栄養目標量
     foodComp: {},            // 食種ID → { 群ID: g } 食品構成表の目標（1人1日当たり）
+    prices: [],              // 食材の単価 [{no,name,spec,packG,yen,vendor}]（modules/kondate.js）
     reportInfo: null,        // 栄養管理報告書の表面（modules/report.js）
     journalForm: null,       // 検食簿・給食日誌の欄立て（modules/journal.js）
     // 情報リンク。設定で足す・消す・並べ替えができる

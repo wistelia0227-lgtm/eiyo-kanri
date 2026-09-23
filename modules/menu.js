@@ -167,6 +167,48 @@
       h('div', { class: 'modal-btns' }, h('button', { class: 'btn primary', onclick: () => { close(); App.refresh(); } }, '閉じる'))), { wide: true });
   }
 
+  // ---- 食種展開: ある食種の献立を、別の食種にそのまま写す ----
+  // 市販ソフトの「献立自動展開」は、食種ごとに量や食品を自動で差し替える（調査 01）。
+  // ここは差し替えまではせず、写したあとに人が直す形にした（自動で変えると、何が変わったのか分からなくなるため）。
+  Menu.expandDialog = function (start, span, fromId) {
+    const m = ms();
+    const days = []; for (let i = 0; i < span; i++) days.push(M.addDays(start, i));
+    const picks = m.shokushu.filter((s) => s.id !== fromId).map((s) => ({ s: s,
+      cb: h('input', { type: 'checkbox' }) }));
+    const over = h('input', { type: 'checkbox' });
+    let close;
+    close = U.modal(h('div', null,
+      h('h2', null, M.label(m.shokushu, fromId) + ' の献立を写す'),
+      h('div', { class: 'sub' }, U.fmtDate(start, true) + ' から ' + span + ' 日ぶんを、下の食種にそのまま写します。' +
+        '写したあとで、量や食品をその食種に合わせて直してください。'),
+      h('div', { class: 'chips' }, picks.map((p) => h('label', { class: 'phrase' }, p.cb, h('span', null, p.s.label)))),
+      h('label', { class: 'phrase' }, over, h('span', null, 'すでに料理が入っているマスも上書きする')),
+      h('div', { class: 'modal-btns' }, h('button', { class: 'btn', onclick: () => close() }, 'やめる'),
+        h('button', { class: 'btn primary', onclick: async () => {
+          const to = picks.filter((p) => p.cb.checked).map((p) => p.s.id);
+          if (!to.length) { U.toast('写す先の食種をえらんでください', true); return; }
+          const meals = M.activeMeals(m);
+          let filled = 0, kept = 0;
+          for (const d of days) {
+            const rec = await Menu.get(d);
+            let touched = false;
+            meals.forEach((ml) => {
+              const src = Menu.cellDishes(rec, ml.id, fromId);
+              if (!src.length) return;
+              to.forEach((sid) => {
+                const key = Menu.cellKey(ml.id, sid);
+                if ((rec.cells[key] || []).length && !over.checked) { kept++; return; }
+                rec.cells[key] = JSON.parse(JSON.stringify(src)); filled++; touched = true;
+              });
+            });
+            if (touched) await DB.put('menus', rec);
+          }
+          close();
+          U.toast(filled + ' マスに写しました' + (kept ? '（すでに入っていた ' + kept + ' マスは残しました）' : ''));
+          App.refresh();
+        } }, '写す'))));
+  };
+
   // ---- 献立の画面 ----
   App.registerScreen('menu', async function (params, root) {
     const m = ms(), meals = M.activeMeals(m), today = U.today();
@@ -198,7 +240,10 @@
       [7, 14].map((k) => h('button', { class: 'btn seg' + (span === k ? ' on' : ''), onclick: () => { span = k; App.refresh(); } }, k + '日')),
       h('span', { class: 'gap' }),
       h('span', { class: 'sub' }, '食種'),
-      U.select(m.shokushu, sId, { noEmpty: true, onchange: (e) => { shokushu = e.target.value; App.refresh(); } })));
+      U.select(m.shokushu, sId, { noEmpty: true, onchange: (e) => { shokushu = e.target.value; App.refresh(); } }),
+      h('span', { class: 'gap' }),
+      h('button', { class: 'btn', onclick: () => Menu.expandDialog(start, span, sId) }, '他の食種へ写す'),
+      h('a', { class: 'btn', href: '#/kondate/' + start }, '献立表を刷る')));
 
     // 目標量
     root.appendChild(h('div', { class: 'card' + (tgt ? '' : ' warn') },
