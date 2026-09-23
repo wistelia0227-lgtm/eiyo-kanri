@@ -50,6 +50,7 @@
     risk: { bmiMid: 18.5, loss: { m1: { mid: 3, high: 5 }, m3: { mid: 3, high: 7.5 }, m6: { mid: 3, high: 10 } }, albMid: 3.5, albHigh: 3.0, intakeMid: 75 },
     weightAlertKg: 2,
     phrases: null,            // 欄ごとの文例（js/phrases.js）
+    life: null,               // LIFE の事業所情報（modules/life.js）
     ncm: null,                // 栄養ケアの期限（js/ncm.js の DEFAULT_INTERVALS）
     nutrientKeys: null,      // 画面に出す栄養素（null = 基本の6つ）
     dishKinds: ['主食', '主菜', '副菜', '汁物', 'デザート', '飲み物'],

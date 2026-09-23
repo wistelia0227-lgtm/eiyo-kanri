@@ -39,6 +39,7 @@
   M.normalizeResident = function (r) {
     r.kana = r.kana || ''; r.gender = r.gender || ''; r.birth = r.birth || '';
     r.heightCm = r.heightCm || null;
+    r.insuredNo = r.insuredNo || ''; r.insurerNo = r.insurerNo || ''; r.careLevel = r.careLevel || '';
     r.category = r.category || 'long';
     r.unit = r.unit || ''; r.room = r.room || '';
     r.weekdays = r.weekdays || [];     // 空 = 毎日

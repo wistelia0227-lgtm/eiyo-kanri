@@ -1,13 +1,13 @@
 // オフラインで開けるようにする（https か localhost で配った時だけ登録される）。
 // 直した時は VERSION を上げる。古い版のファイルは activate で消える。
-const VERSION = 'v0.11';
+const VERSION = 'v0.12';
 const FILES = [
   './', './index.html', './css/style.css',
   './js/util.js', './js/model.js', './js/db.js', './js/profile.js',
-  './js/foods_data.js', './js/nutri.js', './js/ncm.js', './js/phrases.js',
+  './js/foods_data.js', './js/nutri.js', './js/ncm.js', './js/phrases.js', './js/life_spec.js', './js/life.js',
   './js/dishes_seed.js', './js/master.js', './js/view.js', './js/app.js',
   './modules/board.js', './modules/facility.js', './modules/residents.js',
-  './modules/ncm.js', './modules/careplan.js', './modules/census.js', './modules/home.js',
+  './modules/ncm.js', './modules/careplan.js', './modules/life.js', './modules/census.js', './modules/home.js',
   './modules/cards.js', './modules/weights.js', './modules/rounds.js',
   './modules/foods.js', './modules/dishes.js', './modules/menu.js',
   './modules/seed.js', './modules/links.js', './modules/settings.js', './modules/devtools.js',

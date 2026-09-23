@@ -10,6 +10,7 @@
     const today = U.today(), now = Date.now(), day = (k) => M.addDays(today, k);
     const m = window.Master.current;
     m.facility = { name: '見本の里', recorder: '栄養 花子' }; m.units = ['さくら', 'もみじ', 'ショート'];
+    m.life = { careFacilityId: '9900000001', serviceCode: '51', insurerNo: '990001', category: '1', trinity: true };
     m.profile = window.Profile.normalize({ kinds: ['tokuyo', 'short'], supply: 'contract', dietitians: 1, addons: ['genzan', 'kyoka', 'ryoyo'], setupDone: true });
     m.extraRows.forEach((er) => { er.def = er.id === 'staff' ? { l: 8 } : er.id === 'kenshoku' ? { b: 1, l: 1, d: 1 } : {}; });
     await window.Master.save();
@@ -19,11 +20,11 @@
     const v = (d, mm, data, extra) => Object.assign({ id: U.uid('v'), from: { d: d, m: mm }, data: data, recordedAt: now - 86400000, by: '栄養 花子', doctor: 'na' }, extra || {});
     const base = D({ shokushu: 'jo', staple: 'rice', stapleG: 150, side: 'jo', tools: ['箸'], assist: 'self' });
     const list = [
-      mk('山田 ハナ', 'やまだ はな', { unit: 'さくら', room: '101', gender: 'f', birth: '1938-04-02', heightCm: 148, stays: long(day(-400)),
+      mk('山田 ハナ', 'やまだ はな', { unit: 'さくら', room: '101', gender: 'f', birth: '1938-04-02', heightCm: 148, insuredNo: 'H900000001', careLevel: '23', stays: long(day(-400)),
         diet: [v(day(-400), 'l', base), v(today, 'l', D(Object.assign({}, base, { staple: 'kayu', stapleG: 300, side: 'kizami', soupThick: 'thin', notes: '冷まして提供' })), { source: '看護師', reason: 'むせ込みが増えたため', doctor: 'wait', recordedAt: now - 3600000 })] }),
-      mk('佐藤 正一', 'さとう しょういち', { unit: 'さくら', room: '102', gender: 'm', birth: '1935-11-20', heightCm: 162, stays: long(day(-200)),
+      mk('佐藤 正一', 'さとう しょういち', { unit: 'さくら', room: '102', gender: 'm', birth: '1935-11-20', heightCm: 162, insuredNo: 'H900000002', careLevel: '22', stays: long(day(-200)),
         diet: [v(day(-200), 'l', D({ shokushu: 'dm', staple: 'rice', stapleG: 130, side: 'hito', allergy: ['えび', 'かに'], kinshi: [{ food: '納豆', sub: '豆腐' }], tools: ['箸', 'すべり止めマット'], assist: 'watch' }))] }),
-      mk('鈴木 トメ', 'すずき とめ', { unit: 'さくら', room: '103', gender: 'f', birth: '1930-01-15', heightCm: 145, stays: long(day(-700)),
+      mk('鈴木 トメ', 'すずき とめ', { unit: 'さくら', room: '103', gender: 'f', birth: '1930-01-15', heightCm: 145, insuredNo: 'H900000003', careLevel: '25', stays: long(day(-700)),
         diet: [v(day(-700), 'l', D({ shokushu: 'salt', staple: 'kayu_m', stapleG: 250, side: 'mixer', soupThick: 'mid', drinkThick: 'mid', supplements: [{ name: '高カロリーゼリー', when: '15時' }], tools: ['大スプーン', 'エプロン'], assist: 'full', notes: '交互嚥下' }))] }),
       mk('高橋 キヨ', 'たかはし きよ', { unit: 'もみじ', room: '201', gender: 'f', birth: '1941-07-08', heightCm: 150, stays: long(day(-300)),
         absences: [{ id: U.uid('a'), from: { d: today, m: 'l' }, to: { d: today, m: 'l' }, reason: '受診', recordedAt: now - 7200000 }],
@@ -300,6 +301,26 @@
       ok('サイクル献立 1 日目が 1200〜1600kcal', dayK > 1200 && dayK < 1600, dayK);
       const r4 = await S.importCycle(st, 'jo', false);
       ok('二度目は既にある献立を残す', r4.filled === 0 && r4.kept > 0, r4);
+    }
+
+    // LIFE の CSV
+    {
+      const Lx = window.Life;
+      ok('LIFE の項目定義が読める（22/122/79）',
+        Lx.fields('user').length === 22 && Lx.fields('nutrition').length === 122 && Lx.fields('plan').length === 79);
+      const got = await window.LifeUi.collect(M.addDays(today, -60), today);
+      ok('期間の記録から行ができる', got.rows.nutrition.length === 3 && got.rows.user.length >= 3, [got.rows.nutrition.length, got.rows.user.length]);
+      const yamada = got.rows.user.find((v) => v.last_name === '山田');
+      ok('利用者行に被保険者番号と要介護度が入る', yamada.insured_no === 'H900000001' && yamada.care_level === '23', yamada && [yamada.insured_no, yamada.care_level]);
+      ok('利用者行のカナは半角', yamada.last_name_kana === 'ﾔﾏﾀﾞ', yamada.last_name_kana);
+      const missU = Lx.check('user', got.rows.user);
+      ok('番号を入れた人は必須◎が埋まる', !missU.some((x) => x.id === 'insured_no' && x.count >= got.rows.user.length), missU.map((x) => x.id + ':' + x.count));
+      const csv = Lx.csv('nutrition', got.rows.nutrition);
+      const NLCR = String.fromCharCode(13) + String.fromCharCode(10);
+      ok('CSV は 1+行数 行', csv.split(NLCR).filter((x) => x !== '').length === got.rows.nutrition.length + 1);
+      ok('CSV の 1 行目が物理名', csv.split(NLCR)[0].indexOf('care_facility_id,service_code') === 0);
+      const planRows = got.rows.plan;
+      ok('計画書の行もできる', planRows.length === 1 && planRows[0].plan_classification_01 === '1', planRows.length);
     }
 
     // 全画面が例外なく描ける

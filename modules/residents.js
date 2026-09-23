@@ -61,6 +61,8 @@
       gender: U.select([{ id: 'f', label: '女' }, { id: 'm', label: '男' }], r ? r.gender : ''),
       birth: h('input', { class: 'input', type: 'date', value: r ? r.birth : '' }),
       height: h('input', { class: 'input', type: 'number', step: '0.1', value: r && r.heightCm || '', placeholder: 'cm' }),
+      insuredNo: h('input', { class: 'input', type: 'text', value: r ? r.insuredNo : '', placeholder: '例: H900000001' }),
+      careLevel: U.select(window.Life ? window.Life.CARE_LEVELS : [], r ? r.careLevel : '', { emptyLabel: '（未記入）' }),
       memo: h('textarea', { class: 'input', rows: '2' }, r ? r.memo : '')
     };
     const wd = (r ? r.weekdays : []).slice(), mt = (r ? r.mealsTaken : []).slice();
@@ -75,7 +77,8 @@
       if (!name) { U.toast('氏名を入れてください', true); return; }
       const rec = r || M.newResident(name, U.uid);
       Object.assign(rec, { name: name, kana: f.kana.value.trim(), category: f.category.value, unit: f.unit.value.trim(), room: f.room.value.trim(),
-        gender: f.gender.value, birth: f.birth.value, heightCm: parseFloat(f.height.value) || null, memo: f.memo.value.trim(), weekdays: wd.sort(), mealsTaken: mt });
+        gender: f.gender.value, birth: f.birth.value, heightCm: parseFloat(f.height.value) || null, memo: f.memo.value.trim(),
+        insuredNo: f.insuredNo.value.trim(), careLevel: f.careLevel.value, weekdays: wd.sort(), mealsTaken: mt });
       await DB.put('residents', rec);
       if (rec.unit && m.units.indexOf(rec.unit) < 0) { m.units.push(rec.unit); await window.Master.save(); }
       close();
@@ -85,6 +88,8 @@
       h('div', { class: 'grid2' }, U.field('氏名', f.name), U.field('ふりがな', f.kana), U.field('区分', f.category), U.field('性別', f.gender),
         U.field(V.t('place'), f.unit), U.field('部屋・席', f.room), U.field('生年月日', f.birth), U.field('身長 (cm)', f.height, 'BMI の計算に使います')),
       h('datalist', { id: 'dl-units' }, m.units.map((u) => h('option', { value: u }))),
+      window.Life ? h('details', { open: !!(r && (r.insuredNo || r.careLevel)) || null }, h('summary', null, 'LIFE へ出すときに要るもの'),
+        h('div', { class: 'grid2' }, U.field('被保険者番号', f.insuredNo), U.field('要介護度', f.careLevel))) : null,
       h('details', { open: !!(wd.length || mt.length) || null }, h('summary', null, '決まった曜日・食事だけ利用する（デイなど）'),
         U.field('利用する曜日（選ばなければ毎日）', toggles(U.WD.map((w, i) => ({ id: i, label: w })), wd)),
         U.field('食べる食事（選ばなければ全部）', toggles(M.activeMeals(m), mt))),
