@@ -76,6 +76,7 @@
     foodComp: {},            // 食種ID → { 群ID: g } 食品構成表の目標（1人1日当たり）
     prices: [],              // 食材の単価 [{no,name,spec,packG,yen,vendor}]（modules/kondate.js）
     amounts: null,           // 常用量（目安量）。null = 既定（js/amounts.js の DEFAULTS）
+    cardTemplate: null,      // 食札の中身（modules/cards.js の DEFAULT_TEMPLATE）
     reportInfo: null,        // 栄養管理報告書の表面（modules/report.js）
     journalForm: null,       // 検食簿・給食日誌の欄立て（modules/journal.js）
     // 情報リンク。設定で足す・消す・並べ替えができる

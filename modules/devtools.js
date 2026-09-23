@@ -398,6 +398,35 @@
       m2.prices = [];
     }
 
+    // 食札の中身（テンプレート）
+    {
+      const Cx = window.Cards;
+      ok('食札に載せられる項目が 18 ある', Cx.ITEMS.length === 18, Cx.ITEMS.length);
+      ok('初期は 帯3・本文2・指示8', Cx.DEFAULT_TEMPLATE.band.length === 3 && Cx.DEFAULT_TEMPLATE.main.length === 2
+        && Cx.DEFAULT_TEMPLATE.do.length === 8, [Cx.DEFAULT_TEMPLATE.band.length, Cx.DEFAULT_TEMPLATE.main.length, Cx.DEFAULT_TEMPLATE.do.length]);
+      ok('初期の並びの項目はすべて実在する', ['band', 'main', 'do'].every((k) => Cx.DEFAULT_TEMPLATE[k].every((id) => !!Cx.item(id))));
+      ok('設定が無ければ初期の並びを使う', Cx.template().band[0] === 'where');
+      // 中身を変えると刷られる食札が変わる
+      const y8 = res.find((r) => r.name === '鈴木 トメ');
+      const slot = { d: today, m: 'l' };
+      const diet = M.dietAt(y8, slot, m2.meals);
+      const before = Cx.card(y8, diet, slot, m2.cardLayouts[0], false).textContent;
+      m2.cardTemplate = { band: ['room', 'meal'], main: ['staple', 'side', 'age'], do: ['notes'],
+        labels: { staple: 'ごはん' }, notLabel: 'たべられないもの', doLabel: 'おねがい', kana: false, suffix: false };
+      const after = Cx.card(y8, diet, slot, m2.cardLayouts[0], false).textContent;
+      ok('見出しの言葉を変えられる', after.indexOf('ごはん') >= 0 && after.indexOf('たべられないもの') >= 0 && after.indexOf('おねがい') >= 0, after);
+      ok('外した項目は出ない（自助具を指示欄から外した）', before.indexOf('大スプーン') >= 0 && after.indexOf('大スプーン') < 0, [before, after]);
+      ok('足した項目は出る（年齢）', after.indexOf('歳') >= 0, after);
+      const suffix = window.View.t('suffix');
+      ok('敬称を消せる', before.indexOf(suffix) >= 0 && after.indexOf(suffix) < 0, [before, after]);
+      // 禁止の欄は、外す設定が無い（並びに入っていなくても必ず描かれる）
+      const dietNG = Object.assign(M.emptyDiet(), { allergy: ['えび'], kinshi: [{ food: '牛乳', sub: '豆乳' }] });
+      const ngCard = Cx.card(y8, dietNG, slot, m2.cardLayouts[0], false).textContent;
+      ok('アレルギーと禁食は外せない（必ず出る）', ngCard.indexOf('えび') >= 0 && ngCard.indexOf('牛乳') >= 0, ngCard);
+      m2.cardTemplate = null;
+      ok('null に戻すと初期の並びに戻る', Cx.template().main.join() === 'staple,side', Cx.template().main);
+    }
+
     // 入所時の聞き取り
     {
       const Ix = window.Intake;
