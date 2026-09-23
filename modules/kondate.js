@@ -140,13 +140,18 @@
     root.appendChild(h('header', { class: 'topbar' }, h('h1', null, '発注書　' + U.fmtDate(from, true) + ' から ' + days + ' 日分'),
       h('div', { class: 'no-print' }, h('button', { class: 'btn', onclick: () => window.print() }, '印刷'), ' ',
         h('button', { class: 'btn', onclick: () => {
-          const rows = [['業者', '食品番号', '食品名', '純使用量(g)', '廃棄率(%)', '購入量(g)', '規格', '発注数', '単価(円)', '金額(円)']];
-          Object.keys(byVendor).sort().forEach((v) => byVendor[v].forEach((x) => rows.push([v, x.need.no, x.need.name,
-            Math.round(x.need.g), x.order.refuse || 0, Math.round(x.order.buyG),
+          const head = ['食品番号', '食品名', '純使用量(g)', '廃棄率(%)', '購入量(g)', '規格', '発注数', '単価(円)', '金額(円)'];
+          const line = (x) => [x.need.no, x.need.name, Math.round(x.need.g), x.order.refuse || 0, Math.round(x.order.buyG),
             (x.order.price && x.order.price.spec) || '', x.order.packs == null ? '' : x.order.packs,
-            (x.order.price && x.order.price.yen) == null ? '' : x.order.price.yen, x.order.yen == null ? '' : x.order.yen])));
-          U.download('発注_' + from + '.csv', U.csv(rows), 'text/csv');
-        } }, 'CSV で保存'))));
+            (x.order.price && x.order.price.yen) == null ? '' : x.order.price.yen, x.order.yen == null ? '' : x.order.yen];
+          const all = [[U.fmtDate(from, true) + ' から ' + days + ' 日分'], [], ['業者'].concat(head)];
+          Object.keys(byVendor).sort().forEach((v) => byVendor[v].forEach((x) => all.push([v].concat(line(x)))));
+          // 業者ごとに 1 枚ずつ（そのまま渡せるように）
+          const sheets = [{ name: '全部', rows: all }].concat(Object.keys(byVendor).sort().map((v) => ({
+            name: v, rows: [[v + '　御中'], [U.fmtDate(from, true) + ' から ' + days + ' 日分'], [], head]
+              .concat(byVendor[v].map(line)) })));
+          U.xlsx('発注_' + from + '.xlsx', sheets);
+        } }, 'Excel で保存'))));
     root.appendChild(h('div', { class: 'toolrow no-print' },
       h('button', { class: 'btn', onclick: () => App.go('#/order/' + M.addDays(from, -days) + '/' + days) }, '◀ 前'),
       h('button', { class: 'btn', onclick: () => App.go('#/order/' + U.today() + '/' + days) }, '今日から'),

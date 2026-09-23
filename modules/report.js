@@ -152,10 +152,14 @@
           await save(); U.toast('実績から目標を作りました'); App.refresh();
         } }, '実績から目標を作る'),
         h('button', { class: 'btn', onclick: () => {
-          const rows = [['食品群', '目標(g)', '実績(g)']];
-          FG.GROUPS.forEach((g) => { if (comp[g.id] || data.avgGroup.g[g.id]) rows.push([g.label, comp[g.id] || '', Math.round(data.avgGroup.g[g.id] || 0)]); });
-          U.download('食品構成表_' + ym + '.csv', U.csv(rows), 'text/csv');
-        } }, 'CSV で保存'),
+          const rows = [['食品群', '目標(g)', '実績(g)', '差(g)']];
+          FG.GROUPS.forEach((g) => {
+            if (!comp[g.id] && !data.avgGroup.g[g.id]) return;
+            const t = comp[g.id] == null ? null : Number(comp[g.id]), a = Math.round(data.avgGroup.g[g.id] || 0);
+            rows.push([g.label, t == null ? '' : t, a, t == null ? '' : a - t]);
+          });
+          U.xlsx('食品構成表_' + ym + '.xlsx', [{ name: '食品構成表', rows: [[M.label(m.shokushu, sId) + '　' + ym], []].concat(rows) }]);
+        } }, 'Excel で保存'),
         h('button', { class: 'btn danger-outline', onclick: async () => {
           if (!await U.confirm('この食種の目標を全部消します。', { okLabel: '消す', danger: true })) return;
           m.foodComp[sId] = {}; await save(); App.refresh();
@@ -234,11 +238,20 @@
     root.appendChild(h('section', { class: 'card' }, h('h2', null, '食品群別の平均使用量（1 人 1 日）'),
       groupTable(data.avgGroup, (m.foodComp || {})[sId] || {}, sId, null)));
     root.appendChild(h('div', { class: 'toolrow no-print' }, h('button', { class: 'btn', onclick: () => {
-      const rows = [['日'].concat(keys.map((k) => Foods.nutrient(k).name + '(' + Foods.nutrient(k).unit + ')'))];
-      data.perDay.forEach((d) => { if (!d.empty) rows.push([d.date].concat(keys.map((k) => N.round(k, d.nut.values[k])))); });
-      rows.push(['平均'].concat(keys.map((k) => N.round(k, data.avgNut.values[k]))));
-      U.download('栄養出納表_' + ym + '.csv', U.csv(rows), 'text/csv');
-    } }, 'CSV で保存')));
+      const head1 = ['日'].concat(keys.map((k) => Foods.nutrient(k).name + '(' + Foods.nutrient(k).unit + ')'));
+      const day = [[M.label(m.shokushu, sId) + '　' + ym + '　' + modeLabel], [], head1];
+      data.perDay.forEach((d) => { if (!d.empty) day.push([d.date].concat(keys.map((k) => N.round(k, d.nut.values[k])))); });
+      day.push(['平均'].concat(keys.map((k) => N.round(k, data.avgNut.values[k]))));
+      const tg = [['栄養素', '提供量', '目標の下限', '目標の上限']];
+      keys.forEach((k) => {
+        const r = tgt && tgt.target[k];
+        tg.push([Foods.nutrient(k).name + '(' + Foods.nutrient(k).unit + ')', N.round(k, data.avgNut.values[k]),
+          r && r[0] != null ? r[0] : '', r && r[1] != null ? r[1] : '']);
+      });
+      const gr = [['食品群', '1人1日平均(g)']];
+      FG.GROUPS.forEach((g) => { if (data.avgGroup.g[g.id]) gr.push([g.label, Math.round(data.avgGroup.g[g.id])]); });
+      U.xlsx('栄養出納表_' + ym + '.xlsx', [{ name: '栄養出納表', rows: day }, { name: '目標との対比', rows: tg }, { name: '食品群別', rows: gr }]);
+    } }, 'Excel で保存')));
   }
 
   // ---- 栄養管理報告書 ----
@@ -344,17 +357,23 @@
         h('tr', null, h('th', null, '炭水化物エネルギー比'), h('td', null, ratio('cho', 4)))))));
 
     root.appendChild(h('div', { class: 'toolrow no-print' }, h('button', { class: 'btn', onclick: () => {
-      const rows = [['栄養管理報告書', ym], []];
-      R.INFO_FIELDS.forEach((f) => rows.push([f.label, info[f.k] || '']));
-      rows.push([], ['年齢階級', '男', '女']);
-      BANDS.forEach((b) => rows.push([b[2], byBand[b[2]].m, byBand[b[2]].f]));
-      rows.push([], ['BMI 25以上', bmiHigh], ['BMI 18.5未満', bmiLow], ['把握人数', bmiN]);
-      rows.push([], ['食品群', '平均提供量(g)']);
-      FG.REPORT_ROWS.forEach((r) => rows.push([r.label, Math.round(data.avgGroup.g[r.id] || 0)]));
-      rows.push([], ['栄養素', '提供量']);
-      keys.forEach((k) => rows.push([Foods.nutrient(k).name, N.round(k, data.avgNut.values[k])]));
-      U.download('栄養管理報告書_' + ym + '.csv', U.csv(rows), 'text/csv');
-    } }, 'CSV で保存')));
+      const front = [['栄養管理報告書', ym], []];
+      R.INFO_FIELDS.forEach((f) => front.push([f.label, info[f.k] || '']));
+      const back1 = [['年齢階級', '男', '女', '計']];
+      BANDS.forEach((b) => back1.push([b[2], byBand[b[2]].m, byBand[b[2]].f, byBand[b[2]].m + byBand[b[2]].f]));
+      back1.push([], ['身長を把握', hN], ['体重を把握', wN], ['BMI 25以上', bmiHigh], ['BMI 18.5未満', bmiLow], ['BMI を出せた人数', bmiN]);
+      const back2 = [['食品群', '1人1日平均提供量(g)']];
+      FG.REPORT_ROWS.forEach((r) => back2.push([r.label, Math.round(data.avgGroup.g[r.id] || 0)]));
+      const back3 = [['栄養素', '目標量の下限', '目標量の上限', '提供量']];
+      keys.forEach((k) => {
+        const r = tgt && tgt.target[k];
+        back3.push([Foods.nutrient(k).name + '(' + Foods.nutrient(k).unit + ')',
+          r && r[0] != null ? r[0] : '', r && r[1] != null ? r[1] : '', N.round(k, data.avgNut.values[k])]);
+      });
+      back3.push([], ['たんぱく質エネルギー比', ratio('prot', 4)], ['脂質エネルギー比', ratio('fat', 9)], ['炭水化物エネルギー比', ratio('cho', 4)]);
+      U.xlsx('栄養管理報告書_' + ym + '.xlsx', [{ name: '表面', rows: front }, { name: '裏面1 喫食者の構成', rows: back1 },
+        { name: '裏面2 提供食品量', rows: back2 }, { name: '裏面3 栄養量', rows: back3 }]);
+    } }, 'Excel で保存')));
   }
 
   App.registerNav({ order: 50, group: 'まとめ', feature: 'reports', label: '帳票', icon: '📊', hash: '#/report', match: ['report'] });

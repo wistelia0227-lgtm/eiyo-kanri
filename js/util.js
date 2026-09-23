@@ -190,6 +190,16 @@
     return h('div', { class: 'phrase-wrap' }, target, btn);
   };
 
+  // Excel のファイルとして保存（js/xlsx.js）。sheets = [{name, rows}]
+  U.xlsx = function (filename, sheets) {
+    if (!window.Xlsx) { U.toast('Excel の書き出しが読み込まれていません', true); return; }
+    const bytes = window.Xlsx.build(sheets);
+    const url = URL.createObjectURL(new Blob([bytes], { type: window.Xlsx.MIME }));
+    const a = h('a', { href: url, download: filename });
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 3000);
+  };
+
   // ファイルとして保存 / 読み込み
   U.download = function (filename, text, mime) {
     const url = URL.createObjectURL(new Blob([text], { type: mime || 'application/json' }));

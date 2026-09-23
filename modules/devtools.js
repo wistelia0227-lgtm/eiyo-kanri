@@ -398,6 +398,14 @@
       m2.prices = [];
     }
 
+    // Excel の書き出し（画面側でも動くか）
+    {
+      const bytes = window.Xlsx.build([{ name: '試し', rows: [['あ', 1]] }]);
+      ok('ブラウザでも .xlsx が作れる', bytes instanceof Uint8Array && bytes.length > 500, bytes && bytes.length);
+      ok('ZIP のしるしで始まる', bytes[0] === 0x50 && bytes[1] === 0x4B && bytes[2] === 3 && bytes[3] === 4);
+      ok('U.xlsx がある', typeof U.xlsx === 'function');
+    }
+
     // 選択メニューと嗜好調査
     {
       const Cx = window.Choice, Mx = window.Menu;

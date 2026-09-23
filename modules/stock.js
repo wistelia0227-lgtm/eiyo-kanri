@@ -184,7 +184,7 @@
     root.appendChild(h('div', { class: 'toolrow no-print' },
       h('button', { class: 'btn primary', onclick: () => S.outFromMenu(date) }, 'この日の使用量を出庫にする'),
       h('button', { class: 'btn', onclick: () => {
-        const list = [['食品番号', '食品名', '前月繰越(g)', '入庫(g)', '出庫(g)', '残(g)']];
+        const list = [[ym.replace('-', '年') + '月　受払い簿'], [], ['食品番号', '食品名', '前月繰越(g)', '入庫(g)', '出庫(g)', '残(g)']];
         nos.forEach((no) => {
           const mine = inMonth.filter((r) => r.no === no);
           list.push([no, (closing[no] || opening[no] || {}).name || '',
@@ -193,8 +193,11 @@
             Math.round(mine.filter((r) => r.kind === 'out').reduce((s, r) => s + (Number(r.qty) || 0), 0)),
             Math.round((closing[no] || {}).qty || 0)]);
         });
-        U.download('受払い簿_' + ym + '.csv', U.csv(list), 'text/csv');
-      } }, 'CSV で保存')));
+        const detail = [['日', '食品番号', '食品名', '区分', '業者', '数量(g)', '備考']];
+        inMonth.slice().sort((a, b) => a.date.localeCompare(b.date)).forEach((r) => detail.push([r.date, r.no, r.name,
+          r.kind === 'in' ? '入庫' : (r.kind === 'out' ? '出庫' : '棚卸し'), r.vendor || '', Math.round(Number(r.qty) || 0), r.memo || '']));
+        U.xlsx('受払い簿_' + ym + '.xlsx', [{ name: '受払い簿', rows: list }, { name: '明細', rows: detail }]);
+      } }, 'Excel で保存')));
     root.appendChild(h('div', { class: 'sub' }, '出庫は「実施献立の 1 人分 × その食種の食数」を純使用量で引きます（皮や骨は引きません）。' +
       '食品名を押すと、その食品の日ごとの出入りが見られます。'));
   }
