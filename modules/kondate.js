@@ -14,12 +14,19 @@
   // prices: [{ no, name, packG, yen, vendor, spec }] … packG = 1 回に買う単位の重さ(g)、yen = その値段
   K.prices = () => (ms().prices || []);
   K.priceOf = (no) => K.prices().find((p) => p.no === no) || null;
-  // 必要な重さ → 発注する数と金額
+  // 純使用量（可食部）→ 購入量。成分表の廃棄率（皮・骨・殻）を戻す
+  K.buyG = function (no, netG) {
+    const f = N.get(no);
+    const r = f ? N.val(f, 'refuse') : null;
+    return { g: window.Amounts.purchase(netG, r), refuse: r || 0 };
+  };
+  // 購入量 → 発注する数と金額
   K.orderOf = function (no, needG) {
     const p = K.priceOf(no);
-    if (!p || !(p.packG > 0)) return { price: p, packs: null, yen: null };
-    const packs = Math.ceil(needG / p.packG);
-    return { price: p, packs: packs, yen: p.yen != null ? packs * p.yen : null };
+    const buy = K.buyG(no, needG);
+    if (!p || !(p.packG > 0)) return { price: p, buyG: buy.g, refuse: buy.refuse, packs: null, yen: null };
+    const packs = Math.ceil(buy.g / p.packG);
+    return { price: p, buyG: buy.g, refuse: buy.refuse, packs: packs, yen: p.yen != null ? packs * p.yen : null };
   };
 
   // ---- その日の献立を「食種 × 食事 × 料理 × 材料」の形にほどく ----
@@ -133,9 +140,10 @@
     root.appendChild(h('header', { class: 'topbar' }, h('h1', null, '発注書　' + U.fmtDate(from, true) + ' から ' + days + ' 日分'),
       h('div', { class: 'no-print' }, h('button', { class: 'btn', onclick: () => window.print() }, '印刷'), ' ',
         h('button', { class: 'btn', onclick: () => {
-          const rows = [['業者', '食品番号', '食品名', '必要量(g)', '規格', '発注数', '単価(円)', '金額(円)']];
+          const rows = [['業者', '食品番号', '食品名', '純使用量(g)', '廃棄率(%)', '購入量(g)', '規格', '発注数', '単価(円)', '金額(円)']];
           Object.keys(byVendor).sort().forEach((v) => byVendor[v].forEach((x) => rows.push([v, x.need.no, x.need.name,
-            Math.round(x.need.g), (x.order.price && x.order.price.spec) || '', x.order.packs == null ? '' : x.order.packs,
+            Math.round(x.need.g), x.order.refuse || 0, Math.round(x.order.buyG),
+            (x.order.price && x.order.price.spec) || '', x.order.packs == null ? '' : x.order.packs,
             (x.order.price && x.order.price.yen) == null ? '' : x.order.price.yen, x.order.yen == null ? '' : x.order.yen])));
           U.download('発注_' + from + '.csv', U.csv(rows), 'text/csv');
         } }, 'CSV で保存'))));
@@ -156,18 +164,20 @@
       const sum = rows.reduce((s, x) => s + (x.order.yen || 0), 0);
       root.appendChild(h('section', { class: 'card' }, h('h2', null, v + '　' + rows.length + ' 品目' + (sum ? '　' + sum.toLocaleString() + ' 円' : '')),
         h('div', { class: 'scroll-x' }, h('table', { class: 'list bordered' },
-          h('thead', null, h('tr', null, ['食品名', '必要量', '規格', '発注数', '単価', '金額', '納品'].map((t) => h('th', null, t)))),
+          h('thead', null, h('tr', null, ['食品名', '純使用量', '廃棄率', '購入量', '規格', '発注数', '単価', '金額', '納品'].map((t) => h('th', null, t)))),
           h('tbody', null, rows.map((x) => h('tr', null,
             h('td', null, Foods.shortName(x.need.name), h('div', { class: 'sub' }, x.need.no)),
             h('td', { class: 'num' }, K.g(x.need.g)),
+            h('td', { class: 'num sub' }, x.order.refuse ? x.order.refuse + ' %' : '—'),
+            h('td', { class: 'num' }, K.g(x.order.buyG)),
             h('td', null, (x.order.price && x.order.price.spec) || h('span', { class: 'sub' }, '—')),
             h('td', { class: 'num' }, x.order.packs == null ? h('span', { class: 'sub' }, '単価未設定') : x.order.packs + ' 個'),
             h('td', { class: 'num' }, (x.order.price && x.order.price.yen) == null ? '—' : x.order.price.yen + ' 円'),
             h('td', { class: 'num' }, x.order.yen == null ? '—' : x.order.yen.toLocaleString() + ' 円'),
             h('td', { class: 'checkbox-cell' }, '□'))))))));
     });
-    root.appendChild(h('div', { class: 'sub' }, '必要量は「献立の 1 人分 × その日のその食種の食数」を期間ぶん足したものです。' +
-      '廃棄率（皮や骨）は入っていないので、実際の発注はもう少し多くなります。'));
+    root.appendChild(h('div', { class: 'sub' }, '純使用量は「献立の 1 人分 × その日のその食種の食数」を期間ぶん足したもの（可食部）です。' +
+      '購入量は、成分表の廃棄率（皮・骨・殻）を戻した重さ（純使用量 ÷（1 − 廃棄率））。発注数はこの購入量を規格で割って切り上げます。'));
   });
 
   // ---- 設定: 食材の単価 ----

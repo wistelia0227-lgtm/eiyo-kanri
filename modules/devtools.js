@@ -390,7 +390,31 @@
       const o2 = Kx.orderOf('99999', 100);
       ok('単価が無い食材は金額を出さない', o2.packs === null && o2.yen === null, o2);
       ok('重さの表示が kg に切り替わる', Kx.g(950) === '950 g' && Kx.g(1500) === '1.50 kg', [Kx.g(950), Kx.g(1500)]);
+      // 廃棄率（純使用量 → 購入量）
+      const egg = Kx.buyG('12004', 100);   // 鶏卵 全卵 生（廃棄率 14%）
+      ok('廃棄率を戻して購入量が出る（卵 100g → 116g）', egg.refuse === 14 && Math.round(egg.g) === 116, [egg.refuse, Math.round(egg.g)]);
+      const shio = Kx.buyG('17012', 100);  // 食塩（廃棄率 0）
+      ok('廃棄率 0 の食材は純使用量のまま', shio.refuse === 0 && shio.g === 100, shio);
       m2.prices = [];
+    }
+
+    // 常用量（目安量）
+    {
+      const Ax = window.Amounts;
+      ok('目安量の初期値がある', Ax.DEFAULTS.length >= 40, Ax.DEFAULTS.length);
+      const egg2 = Ax.forFood(null, '12004');
+      ok('卵に M玉 1個 = 50g がある', egg2.some((x) => x.unit === 'M玉 1個' && x.g === 50), egg2);
+      const shoyu = Ax.forFood(null, '17007');
+      ok('しょうゆに 小さじ1 = 6g と 大さじ1 = 18g がある',
+        shoyu.some((x) => x.unit === '小さじ1' && x.g === 6) && shoyu.some((x) => x.unit === '大さじ1' && x.g === 18), shoyu);
+      ok('目安量の食品番号はすべて成分表にある', Ax.DEFAULTS.every((x) => !!window.Nutri.get(x.no)),
+        Ax.DEFAULTS.filter((x) => !window.Nutri.get(x.no)).map((x) => x.no));
+      ok('可食部 → 購入量（廃棄率 40% なら 1.67 倍）', Math.round(Ax.purchase(60, 40)) === 100, Ax.purchase(60, 40));
+      ok('廃棄率 0・未測定は そのまま', Ax.purchase(50, 0) === 50 && Ax.purchase(50, null) === 50);
+      // 目安量（可食部）に廃棄率を戻すと、よく言われる 1 個の重さに戻る
+      const banana = Ax.forFood(null, '07107')[0];
+      ok('バナナ 1本 90g（可食部）は、皮を入れると 150g', Math.round(Ax.purchase(banana.g, window.Nutri.val(window.Nutri.get('07107'), 'refuse'))) === 150,
+        Math.round(Ax.purchase(banana.g, 40)));
     }
 
     // 検食簿・給食日誌

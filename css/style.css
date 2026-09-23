@@ -214,3 +214,6 @@ table.stamps td { height: 14mm; }
 table.kondate th.dishname { text-align: left; white-space: nowrap; vertical-align: top; background: var(--head); }
 table.kondate td.shiji { vertical-align: top; font-size: .85rem; white-space: pre-wrap; min-width: 12em; }
 table.list td.num, table.list th.num { text-align: right; white-space: nowrap; }
+
+/* 材料の欄に出る常用量のボタン（modules/dishes.js） */
+.btn.seg.tiny { font-size: .7rem; padding: 0 .3rem; line-height: 1.5; }

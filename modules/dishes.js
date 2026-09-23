@@ -52,7 +52,11 @@
           return h('tr', null,
             h('td', null, f ? f.name : h('span', { class: 'bad-text' }, '見つからない食品番号 ' + it.no), h('div', { class: 'sub' }, it.no)),
             h('td', null, h('input', { class: 'input num', type: 'number', step: '0.1', min: '0', value: it.g,
-              onchange: (e) => { it.g = parseFloat(e.target.value) || 0; redraw(); } })),
+              onchange: (e) => { it.g = parseFloat(e.target.value) || 0; redraw(); } }),
+              // 常用量（「卵 1個」「しょうゆ 大さじ1」）。押すと g が入る
+              h('div', { class: 'segrow' }, window.Amounts.forFood(ms().amounts, it.no).map((a) => h('button', {
+                type: 'button', class: 'btn seg tiny', title: a.unit + ' = ' + a.g + 'g' + (a.note ? '　' + a.note : ''),
+                onclick: () => { it.g = (Number(it.g) || 0) + a.g; redraw(); } }, a.unit)))),
             h('td', null, one ? N.fmt('kcal', one.values.kcal) : '—'),
             h('td', null, one ? N.fmt('prot', one.values.prot) : '—'),
             h('td', null, one ? N.fmt('nacl', one.values.nacl) : '—'),
@@ -237,6 +241,60 @@
     root.appendChild(box);
     draw();
   });
+
+  // ---- 設定: 常用量（目安量）----
+  // 「卵 1個」「しょうゆ 大さじ1」のような言い方から g を入れるための表。材料の欄の下にボタンで出る。
+  App.registerSettings({ order: 47, title: '常用量（目安量）', render: function () {
+    const m = ms();
+    const A = window.Amounts;
+    if (!m.amounts) m.amounts = JSON.parse(JSON.stringify(A.DEFAULTS));
+    const box = h('div');
+    function draw() {
+      box.innerHTML = '';
+      const byFood = {};
+      m.amounts.forEach((x, i) => { (byFood[x.no] = byFood[x.no] || []).push({ x: x, i: i }); });
+      const order = Object.keys(byFood).sort();
+      box.appendChild(h('div', { class: 'scroll-x' }, h('table', { class: 'list edit' },
+        h('thead', null, h('tr', null, ['食品', '言い方', 'グラム（可食部）', '補足', ''].map((t) => h('th', null, t)))),
+        h('tbody', null, order.map((no) => byFood[no].map((e, j) => {
+          const x = e.x;
+          const f = N.get(no);
+          const inp = (key, type) => {
+            const el = h('input', { class: 'input' + (type === 'number' ? ' num' : ''), type: type || 'text',
+              step: 'any', value: x[key] == null ? '' : x[key] });
+            el.addEventListener('change', async () => {
+              const v = el.value.trim();
+              x[key] = (type === 'number') ? (v === '' ? null : parseFloat(v)) : v;
+              await window.Master.save();
+            });
+            return el;
+          };
+          return h('tr', null,
+            j === 0 ? h('th', { rowspan: String(byFood[no].length) }, f ? Foods.shortName(f.name) : no,
+              h('div', { class: 'sub' }, no + (f && N.val(f, 'refuse') ? '　廃棄率 ' + N.val(f, 'refuse') + '%' : ''))) : null,
+            h('td', null, inp('unit')), h('td', null, inp('g', 'number')), h('td', null, inp('note')),
+            h('td', null, h('button', { class: 'btn small', onclick: async () => {
+              m.amounts.splice(e.i, 1); await window.Master.save(); draw();
+            } }, '消す')));
+        }))))));
+      box.appendChild(h('div', { class: 'toolrow' },
+        h('button', { class: 'btn primary', onclick: async () => {
+          const f = await Foods.pick();
+          if (!f) return;
+          m.amounts.push({ no: f.no, unit: '1個', g: 100, note: '' });
+          await window.Master.save(); draw();
+        } }, '＋ 食品を足す'),
+        h('button', { class: 'btn danger-outline', onclick: async () => {
+          if (!await U.confirm('常用量を最初の状態に戻します。足した分・直した分は消えます。', { okLabel: '戻す', danger: true })) return;
+          m.amounts = JSON.parse(JSON.stringify(A.DEFAULTS)); await window.Master.save(); draw();
+        } }, '最初の状態に戻す')));
+    }
+    draw();
+    return h('div', null, h('div', { class: 'sub' },
+      'グラムは可食部（皮や殻を除いた重さ）です。商品や産地で変わるので、施設の実物に合わせて直してください。' +
+      '計量スプーンは 小さじ5mL・大さじ15mL・カップ200mL を前提にしています。' +
+      '購入する重さは、この値と成分表の廃棄率から発注書が計算します。'), box);
+  } });
 
   App.registerNav({ order: 72, feature: 'menu', label: '料理', icon: '🍲', hash: '#/dishes', match: ['dishes'] });
   window.Dishes = D;
