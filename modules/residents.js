@@ -248,6 +248,7 @@
 
   // ---------- 個人画面 ----------
   App.registerScreen('resident', async function (params, root) {
+    if (!params[0]) { root.appendChild(h('div', { class: 'empty' }, V.t('person') + 'の一覧からえらんでください。')); return; }
     const r = await DB.get('residents', params[0]);
     if (!r) { root.appendChild(h('div', { class: 'empty' }, 'この方は見つかりません。')); return; }
     M.normalizeResident(r);

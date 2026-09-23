@@ -351,6 +351,16 @@
       try { await App.screens[name]((['resident', 'plan', 'form411', 'form42'].indexOf(name) >= 0) ? [y.id] : [], box); } catch (e) { err = e.message; }
       ok('画面「' + name + '」が描ける', !err && box.childNodes.length > 0, err);
     }
+    // データが空でも全画面が描けるか（「該当なし」で null を返す作りの取りこぼしを見つける）
+    for (const st of DB.STORES) await DB.clear(st);
+    await window.Master.load();
+    for (const name of Object.keys(App.screens)) {
+      const box = h('div');
+      let err = null;
+      try { await App.screens[name]([], box); } catch (e) { err = e.message; }
+      ok('空のデータでも画面「' + name + '」が描ける', !err, err);
+    }
+
     const bad = results.filter((r) => !r.ok).length;
     const root = document.getElementById('root');
     root.innerHTML = '';

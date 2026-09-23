@@ -21,6 +21,8 @@
     if (Array.isArray(kid)) { kid.forEach((k) => append(el, k)); return; }
     el.appendChild(kid instanceof Node ? kid : document.createTextNode(String(kid)));
   }
+  // null を渡しても落ちないようにする（作る関数が「該当なし」で null を返すことがある）
+  U.add = function (parent, kid) { if (kid) parent.appendChild(kid); return parent; };
   U.h = function (tag, attrs) {
     const el = document.createElement(tag);
     const later = [];

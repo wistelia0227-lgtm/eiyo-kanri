@@ -1,6 +1,4 @@
-// オフラインで開けるようにする（https か localhost で配った時だけ登録される）。
-// 直した時は VERSION を上げる。古い版のファイルは activate で消える。
-const VERSION = 'v0.13';
+﻿// 繧ｪ繝輔Λ繧､繝ｳ縺ｧ髢九￠繧九ｈ縺・↓縺吶ｋ・・ttps 縺・localhost 縺ｧ驟阪▲縺滓凾縺縺醍匳骭ｲ縺輔ｌ繧具ｼ峨・// 逶ｴ縺励◆譎ゅ・ VERSION 繧剃ｸ翫￡繧九ょ商縺・沿縺ｮ繝輔ぃ繧､繝ｫ縺ｯ activate 縺ｧ豸医∴繧九・const VERSION = 'v0.14';
 const FILES = [
   './', './index.html', './css/style.css',
   './js/util.js', './js/model.js', './js/db.js', './js/profile.js',
@@ -24,7 +22,7 @@ self.addEventListener('fetch', (e) => {
   if (e.request.method !== 'GET') return;
   e.respondWith(
     caches.match(e.request).then((hit) => hit || fetch(e.request).then((res) => {
-      // 取れたものは次回のために置いておく
+      // 蜿悶ｌ縺溘ｂ縺ｮ縺ｯ谺｡蝗槭・縺溘ａ縺ｫ鄂ｮ縺・※縺翫￥
       const copy = res.clone();
       caches.open(VERSION).then((c) => c.put(e.request, copy)).catch(() => {});
       return res;

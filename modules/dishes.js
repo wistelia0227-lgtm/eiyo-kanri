@@ -232,8 +232,8 @@
         used.map((v) => h('button', { class: 'btn seg small' + (cur === v ? ' on' : ''), onclick: () => { set(cur === v ? '' : v); App.refresh(); } },
           v + ' ' + all.filter((d) => (label === '主材料' ? d.main : d.method) === v).length)));
     };
-    root.appendChild(chipRow('主材料', m.dishMains, listMain, (v) => { listMain = v; }));
-    root.appendChild(chipRow('調理法', m.dishMethods, listMethod, (v) => { listMethod = v; }));
+    U.add(root, chipRow('主材料', m.dishMains, listMain, (v) => { listMain = v; }));
+    U.add(root, chipRow('調理法', m.dishMethods, listMethod, (v) => { listMethod = v; }));
     root.appendChild(box);
     draw();
   });
