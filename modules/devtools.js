@@ -398,6 +398,25 @@
       m2.prices = [];
     }
 
+    // 衛生管理の点検表
+    {
+      const HF = window.HygieneForms, HYx = window.Hygiene;
+      ok('点検表 5 つ＋記録簿 3 つが画面に出る', HYx.ALL().length === 8, HYx.ALL().length);
+      const daily = await HYx.get(today);
+      const rec = HYx.recOf(daily, 'shisetsu');
+      ok('まだ何も付けていない', HF.countDone(HF.form('shisetsu'), rec).done === 0);
+      rec.items[HF.itemId('daily', 0)] = '○';
+      rec.items[HF.itemId('daily', 1)] = '×';
+      await DB.put('daily', daily);
+      const back = await HYx.get(today);
+      const rec2 = HYx.recOf(back, 'shisetsu');
+      ok('点検の結果が保存される', rec2.items[HF.itemId('daily', 0)] === '○' && rec2.items[HF.itemId('daily', 1)] === '×', rec2.items);
+      ok('× が改善の要る所として拾える', HF.bad(HF.form('shisetsu'), rec2).length === 1, HF.bad(HF.form('shisetsu'), rec2));
+      ok('食数の手入力（extra）と同居できる', back.extra !== undefined);
+      // 片付け
+      delete back.hygiene; await DB.put('daily', back);
+    }
+
     // 掲示用の献立表と給食会議の議事録
     {
       const Px = window.Poster;

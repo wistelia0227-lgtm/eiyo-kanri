@@ -232,3 +232,7 @@ table.poster td { vertical-align: top; }
 table.poster td div { white-space: nowrap; }
 .field.span2 { grid-column: 1 / -1; }
 @media print { .poster-head h1 { font-size: 18pt; } table.poster { font-size: 10pt; } }
+
+/* 衛生管理の点検表（modules/hygiene.js） */
+table.check th.num { width: 2em; text-align: center; }
+table.check td:nth-child(2) { line-height: 1.45; }
