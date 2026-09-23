@@ -398,6 +398,27 @@
       m2.prices = [];
     }
 
+    // 掲示用の献立表と給食会議の議事録
+    {
+      const Px = window.Poster;
+      ok('掲示に出す栄養素の既定は 熱量・たんぱく質・脂質・食塩',
+        Px.POSTER_KEYS.join() === 'kcal,prot,fat,nacl', Px.POSTER_KEYS);
+      ok('設定が無ければ既定を使う', Px.keys().join() === 'kcal,prot,fat,nacl', Px.keys());
+      m2.posterKeys = ['kcal', 'ca', 'zzz'];
+      ok('成分表に無いキーは落とす', Px.keys().join() === 'kcal,ca', Px.keys());
+      m2.posterKeys = null;
+      ok('議事録の欄が 8 つ（帳票一覧の項目どおり）', Px.MINUTES_FIELDS.length === 8, Px.MINUTES_FIELDS.length);
+      ok('議事録に 実施年月日・時間・場所・参加者・議題・討議内容・決定事項 がある',
+        ['date', 'time', 'place', 'members', 'agenda', 'talk', 'decided'].every((k) => Px.MINUTES_FIELDS.some((f) => f.id === k)));
+      // 議事録は meta に並びで持つ
+      const rec = { id: 'g1', date: today, time: '14:00〜15:00', place: '会議室', members: ['施設長', '管理栄養士'],
+        agenda: '嗜好調査の結果', talk: '', decided: '', next: '', at: Date.now() };
+      await DB.setMeta('minutes', [rec]);
+      const back = await DB.getMeta('minutes', []);
+      ok('議事録が保存される', back.length === 1 && back[0].members.length === 2, back.length);
+      await DB.setMeta('minutes', []);
+    }
+
     // Excel の書き出し（画面側でも動くか）
     {
       const bytes = window.Xlsx.build([{ name: '試し', rows: [['あ', 1]] }]);

@@ -223,3 +223,12 @@ table.list td.num, table.list th.num { text-align: right; white-space: nowrap; }
 
 /* 表の中の 良/否 のような短い選択は折り返さない（modules/stock.js） */
 table.list td .segrow { flex-wrap: nowrap; }
+
+/* 掲示用の献立表と議事録（modules/poster.js） */
+.poster-head { text-align: center; margin: .8rem 0 .4rem; }
+.poster-head h1 { font-size: 1.5rem; letter-spacing: .3em; margin: 0; }
+table.poster thead th { white-space: nowrap; }
+table.poster td { vertical-align: top; }
+table.poster td div { white-space: nowrap; }
+.field.span2 { grid-column: 1 / -1; }
+@media print { .poster-head h1 { font-size: 18pt; } table.poster { font-size: 10pt; } }
