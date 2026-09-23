@@ -398,6 +398,34 @@
       m2.prices = [];
     }
 
+    // 検収・在庫・受払い
+    {
+      const Sx = window.Stock;
+      ok('検収の欄が 大量調理施設衛生管理マニュアル 様式4 の 8 項目', Sx.CHECK_FIELDS.length === 8
+        && Sx.CHECK_FIELDS.map((f) => f.id).join() === 'time,origin,expiry,fresh,pack,temp,foreign,advice',
+        Sx.CHECK_FIELDS.map((f) => f.id));
+      const d1 = M.addDays(today, -3), d2 = M.addDays(today, -2), d3 = M.addDays(today, -1);
+      const mk = (date, kind, qty, no) => ({ id: U.uid('s'), date: date, no: no || '01083', name: '精白米',
+        kind: kind, qty: qty, vendor: '米屋', memo: '', at: Date.now(), check: {} });
+      await DB.putMany('stock', [mk(d1, 'in', 5000), mk(d2, 'out', 1200), mk(d3, 'out', 1300)]);
+      const rows = await Sx.all();
+      const bal = Sx.balance(rows);
+      ok('入庫 − 出庫 = 残（5000 − 1200 − 1300 = 2500）', bal['01083'].qty === 2500, bal['01083'].qty);
+      const upto = Sx.balance(rows, d2);
+      ok('日付で区切って残が出せる（d2 まで 3800）', upto['01083'].qty === 3800, upto['01083'].qty);
+      // 棚卸しはそれまでの計算を上書きする
+      await DB.put('stock', mk(d3, 'adjust', 2400));
+      const rows2 = await Sx.all();
+      ok('棚卸しを入れるとその実数が残になる', Sx.balance(rows2)['01083'].qty === 2400, Sx.balance(rows2)['01083'].qty);
+      // 棚卸しの後にまた出庫すると、そこから引かれる
+      await DB.put('stock', mk(today, 'out', 400));
+      ok('棚卸しの後の出庫は実数から引く（2400 − 400 = 2000）',
+        Sx.balance(await Sx.all())['01083'].qty === 2000, Sx.balance(await Sx.all())['01083'].qty);
+      ok('入庫と出庫の向きが分かる', Sx.sign('in') === 1 && Sx.sign('out') === -1);
+      await DB.clear('stock');
+      ok('出入りを消せば残も消える', Object.keys(Sx.balance(await Sx.all())).length === 0);
+    }
+
     // 実施献立表と残食（喫食）調査
     {
       const Mx = window.Menu, Jx = window.Jisshi;

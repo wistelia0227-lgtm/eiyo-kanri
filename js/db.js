@@ -4,7 +4,7 @@
 // スキーマを変える時は既存ストアに触らず、version を上げて新ストアを足す。
 (function () {
   'use strict';
-  const DB = { name: 'eiyo_kanri_db', version: 4 };
+  const DB = { name: 'eiyo_kanri_db', version: 5 };
   const q = location.search;
   if (/[?&]selftest/.test(q)) DB.name = 'eiyo_kanri_selftest';
   else if (/[?&]demo/.test(q)) DB.name = 'eiyo_kanri_demo';
@@ -30,6 +30,7 @@
         mk('menus', { keyPath: 'date' });
         mk('ncm', { keyPath: 'id' }, ['residentId', 'date']);
         mk('plans', { keyPath: 'id' }, ['residentId']);
+        mk('stock', { keyPath: 'id' }, ['date', 'no']);   // 検収と在庫の出入り（modules/stock.js）
         mk('meta', { keyPath: 'key' });
       };
       req.onsuccess = () => resolve(req.result);
@@ -49,7 +50,7 @@
     }));
   }
 
-  DB.STORES = ['residents', 'measures', 'rounds', 'daily', 'dishes', 'menus', 'ncm', 'plans', 'meta'];
+  DB.STORES = ['residents', 'measures', 'rounds', 'daily', 'dishes', 'menus', 'ncm', 'plans', 'stock', 'meta'];
   DB.getAll = (store) => run(store, 'readonly', (s) => s.getAll());
   DB.get = (store, id) => run(store, 'readonly', (s) => s.get(id));
   DB.put = (store, obj) => run(store, 'readwrite', (s) => s.put(obj));
