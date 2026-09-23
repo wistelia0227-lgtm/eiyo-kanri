@@ -4,6 +4,12 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>栄養・食事管理</title>
+<meta name="theme-color" content="#e5e7eb">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="栄養管理">
 <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
@@ -49,6 +55,12 @@
 <!-- 開発用（削除可能）: このscriptタグと modules/devtools.js を消せば本番構成。?demo と ?selftest が使えなくなるだけ -->
 <script src="modules/devtools.js"></script>
 
-<script>App.start();</script>
+<script>
+App.start();
+// https か localhost で配った時だけ、オフラインでも開けるようにする（file:// では何もしない）
+if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) {
+  navigator.serviceWorker.register('sw.js').catch(function (e) { console.warn('sw', e); });
+}
+</script>
 </body>
 </html>
