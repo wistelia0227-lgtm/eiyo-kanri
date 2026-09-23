@@ -161,5 +161,5 @@
     if (!last || Date.now() - last > 14 * 86400000) root.appendChild(h('div', { class: 'card warn' }, last ? '最後のバックアップから 2 週間以上たっています（' + U.fmtDateTime(last) + '）。' : 'まだ一度もバックアップしていません。'));
     for (const sec of App.settings) { root.appendChild(h('h2', { class: 'sec' }, sec.title)); root.appendChild(await sec.render()); }
   });
-  App.registerNav({ order: 90, label: '設定', icon: '⚙️', hash: '#/settings', match: ['settings'] });
+  App.registerNav({ order: 90, group: '', label: '設定', icon: '⚙️', hash: '#/settings', match: ['settings'] });
 })();

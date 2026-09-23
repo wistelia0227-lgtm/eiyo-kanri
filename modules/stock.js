@@ -288,6 +288,6 @@
       }))));
   });
 
-  App.registerNav({ order: 71.8, feature: 'menu', label: '検収', icon: '📦', hash: '#/stock', match: ['stock', 'stockone'] });
+  App.registerNav({ order: 45, group: '献立と食材', feature: 'menu', label: '検収', icon: '📦', hash: '#/stock', match: ['stock', 'stockone'] });
   window.Stock = S;
 })();

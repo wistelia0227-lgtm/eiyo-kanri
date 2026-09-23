@@ -319,6 +319,6 @@
     }
   });
 
-  App.registerNav({ order: 20, label: () => V.t('person'), icon: '👤', hash: '#/residents', match: ['residents', 'resident'] });
+  App.registerNav({ order: 20, group: 'ひと', label: () => V.t('person'), icon: '👤', hash: '#/residents', match: ['residents', 'resident'] });
   window.Residents = R;
 })();

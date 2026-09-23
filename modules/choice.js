@@ -263,7 +263,7 @@
     return sec;
   };
 
-  App.registerNav({ order: 70.5, feature: 'menu', label: '選択', icon: '🍱', hash: '#/choice', match: ['choice'] });
-  App.registerNav({ order: 77.5, feature: 'reports', label: '嗜好', icon: '💬', hash: '#/kikou', match: ['kikou'] });
+  App.registerNav({ order: 33, group: '毎日', feature: 'menu', label: '選択', icon: '🍱', hash: '#/choice', match: ['choice'] });
+  App.registerNav({ order: 51, group: 'まとめ', feature: 'reports', label: '嗜好', icon: '💬', hash: '#/kikou', match: ['kikou'] });
   window.Choice = C;
 })();

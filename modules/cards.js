@@ -299,5 +299,5 @@
     draw();
   });
 
-  App.registerNav({ order: 40, feature: 'cards', label: '食札', icon: '🏷️', hash: '#/cards', match: ['cards', 'kinshi', 'check'] });
+  App.registerNav({ order: 31, group: '毎日', feature: 'cards', label: '食札', icon: '🏷️', hash: '#/cards', match: ['cards', 'kinshi', 'check'] });
 })();

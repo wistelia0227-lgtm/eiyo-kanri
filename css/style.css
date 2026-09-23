@@ -15,6 +15,9 @@ h2.sec { margin: 1.4rem 0 .5rem; }
 .nav-title { font-weight: 700; padding: .4rem .5rem .8rem; }
 .nav-item { display: flex; gap: .55rem; align-items: center; padding: .7rem .6rem; border-radius: 8px; color: var(--text); text-decoration: none; font-size: 1.05rem; }
 .nav-item:hover { background: #d1d5db; } .nav-item.on { background: var(--panel); font-weight: 700; box-shadow: 0 0 0 1px var(--line); }
+.nav-sep { height: 1px; background: var(--line); margin: .6rem .6rem .2rem; }
+.nav-group { margin: .7rem .6rem .15rem; font-size: .78rem; font-weight: 700; color: var(--sub); letter-spacing: .04em; }
+.nav-item { padding: .55rem .6rem; }
 .nav-note { margin-top: 1rem; padding: .5rem; font-size: .8rem; background: var(--warnbg); color: var(--warn); border-radius: 6px; }
 #root { flex: 1; min-width: 0; padding: 1rem 1.4rem 4rem; max-width: 1500px; }
 #errbar { background: var(--bad); color: #fff; padding: .5rem 1rem; position: sticky; top: 0; z-index: 50; }
@@ -106,7 +109,7 @@ table.edit td { padding: .2rem .3rem; }
 .fc-do .fc-item { font-weight: 400; }
 .fc-none { font-size: calc(2.6mm * var(--u)); color: #9ca3af; }
 
-@media (max-width: 800px) { #layout { display: block; } #nav { width: auto; height: auto; position: static; display: flex; flex-wrap: wrap; } .nav-title { display: none; } .grid2, .grid3 { grid-template-columns: 1fr; } }
+@media (max-width: 800px) { #layout { display: block; } #nav { width: auto; height: auto; position: static; display: flex; flex-wrap: wrap; align-items: center; } .nav-title { display: none; } .nav-group { width: 100%; margin: .4rem .3rem 0; } .nav-sep { width: 100%; margin: .3rem .3rem; } .grid2, .grid3 { grid-template-columns: 1fr; } }
 @media print {
   @page { size: A4; margin: 12mm; }
   body { background: #fff; } #nav, #toast, #errbar, .no-print { display: none !important; } #root { padding: 0; max-width: none; }

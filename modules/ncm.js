@@ -332,6 +332,6 @@
     }
   });
 
-  App.registerNav({ order: 25, feature: 'ncm', label: '栄養ケア', icon: '📝', hash: '#/ncm', match: ['ncm'] });
+  App.registerNav({ order: 21, group: 'ひと', feature: 'ncm', label: '栄養ケア', icon: '📝', hash: '#/ncm', match: ['ncm'] });
   window.Ncm = X;
 })();

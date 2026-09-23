@@ -353,6 +353,6 @@
       h('div', { class: 'sub' }, '主材料・調理法は 料理マスタ の各料理に付けます（設定 → 呼び方（マスタ）で一覧を変えられます）。')));
   });
 
-  App.registerNav({ order: 70, feature: 'menu', label: '献立', icon: '📅', hash: '#/menu', match: ['menu'] });
+  App.registerNav({ order: 40, group: '献立と食材', feature: 'menu', label: '献立', icon: '📅', hash: '#/menu', match: ['menu'] });
   window.Menu = Menu;
 })();

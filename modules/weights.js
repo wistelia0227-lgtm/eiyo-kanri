@@ -121,6 +121,6 @@
     }
   });
 
-  App.registerNav({ order: 50, feature: 'weights', label: '体重', icon: '⚖️', hash: '#/weights', match: ['weights'] });
+  App.registerNav({ order: 22, group: 'ひと', feature: 'weights', label: '体重', icon: '⚖️', hash: '#/weights', match: ['weights'] });
   window.Weights = W;
 })();

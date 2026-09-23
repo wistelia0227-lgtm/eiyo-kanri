@@ -173,6 +173,6 @@
       href: '#/jisshi/' + y }];
   });
 
-  App.registerNav({ order: 71.5, feature: 'menu', label: '実施', icon: '✅', hash: '#/jisshi', match: ['jisshi'] });
+  App.registerNav({ order: 42, group: '献立と食材', feature: 'menu', label: '実施', icon: '✅', hash: '#/jisshi', match: ['jisshi'] });
   window.Jisshi = J;
 })();

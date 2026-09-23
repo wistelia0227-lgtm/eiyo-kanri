@@ -147,6 +147,6 @@
     root.appendChild(h('div', { class: 'print-only signline' }, '連絡した人 ＿＿＿＿＿＿　受けた人 ＿＿＿＿＿＿　時刻 ＿＿：＿＿'));
   });
 
-  App.registerNav({ order: 30, feature: 'census', label: '食数', icon: '🔢', hash: '#/census', match: ['census', 'day'] });
+  App.registerNav({ order: 30, group: '毎日', feature: 'census', label: '食数', icon: '🔢', hash: '#/census', match: ['census', 'day'] });
   window.Census = C;
 })();

@@ -87,6 +87,6 @@
     return data.rows.length ? [{ level: 'info', text: '今日の補食 ' + data.rows.length + ' 件（' + Object.keys(data.byTime).sort().join('・') + '）', href: '#/supp/' + ctx.today }] : [];
   });
 
-  App.registerNav({ order: 45, feature: 'cards', label: '補食', icon: '🥤', hash: '#/supp', match: ['supp', 'supplabel'] });
+  App.registerNav({ order: 32, group: '毎日', feature: 'cards', label: '補食', icon: '🥤', hash: '#/supp', match: ['supp', 'supplabel'] });
   window.Supplements = S;
 })();

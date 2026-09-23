@@ -296,6 +296,6 @@
       '購入する重さは、この値と成分表の廃棄率から発注書が計算します。'), box);
   } });
 
-  App.registerNav({ order: 72, feature: 'menu', label: '料理', icon: '🍲', hash: '#/dishes', match: ['dishes'] });
+  App.registerNav({ order: 43, group: '献立と食材', feature: 'menu', label: '料理', icon: '🍲', hash: '#/dishes', match: ['dishes'] });
   window.Dishes = D;
 })();

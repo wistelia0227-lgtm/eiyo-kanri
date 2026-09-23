@@ -357,6 +357,6 @@
     } }, 'CSV で保存')));
   }
 
-  App.registerNav({ order: 76, feature: 'reports', label: '帳票', icon: '📊', hash: '#/report', match: ['report'] });
+  App.registerNav({ order: 50, group: 'まとめ', feature: 'reports', label: '帳票', icon: '📊', hash: '#/report', match: ['report'] });
   window.Report = R;
 })();

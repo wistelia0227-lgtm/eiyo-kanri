@@ -46,6 +46,6 @@
     root.appendChild(h('div', { class: 'sub no-print' }, '列は使っている機能だけ出ます（設定 → 事業所）。'));
   });
 
-  App.registerNav({ order: 15, label: 'やること', icon: '🗂️', hash: '#/board', match: ['board'] });
+  App.registerNav({ order: 15, group: '', label: 'やること', icon: '🗂️', hash: '#/board', match: ['board'] });
   window.Board = B;
 })();

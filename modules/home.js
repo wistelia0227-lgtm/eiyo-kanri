@@ -51,5 +51,5 @@
     root.appendChild(await window.Census.dayBlock(today));
   });
 
-  App.registerNav({ order: 10, label: '今日', icon: '📋', hash: '#/home', match: ['home'] });
+  App.registerNav({ order: 10, group: '', label: '今日', icon: '📋', hash: '#/home', match: ['home'] });
 })();

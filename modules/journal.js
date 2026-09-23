@@ -223,6 +223,6 @@
       } }, '最初の状態に戻す'));
   } });
 
-  App.registerNav({ order: 77, feature: 'reports', label: '検食', icon: '🍽', hash: '#/journal', match: ['journal', 'journallist'] });
+  App.registerNav({ order: 34, group: '毎日', feature: 'reports', label: '検食', icon: '🍽', hash: '#/journal', match: ['journal', 'journallist'] });
   window.Journal = J;
 })();

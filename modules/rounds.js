@@ -108,5 +108,5 @@
     }
   });
 
-  App.registerNav({ order: 60, feature: 'rounds', label: 'ラウンド', icon: '👀', hash: '#/rounds', match: ['rounds'] });
+  App.registerNav({ order: 23, group: 'ひと', feature: 'rounds', label: 'ラウンド', icon: '👀', hash: '#/rounds', match: ['rounds'] });
 })();

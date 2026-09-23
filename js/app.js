@@ -47,7 +47,11 @@
     bar.innerHTML = '';
     bar.appendChild(h('div', { class: 'nav-title' }, '栄養・食事管理'));
     const prof = window.Master.current.profile;
+    // かたまり（group）が変わる所に見出しを挟む。項目が増えても迷わないようにするため
+    let group = null;
     App.nav.filter((t) => window.Profile.enabled(prof, t.feature)).forEach((t) => {
+      const g = t.group || '';
+      if (g !== group) { bar.appendChild(g ? h('div', { class: 'nav-group' }, g) : h('div', { class: 'nav-sep' })); group = g; }
       const on = t.match.indexOf(current) >= 0;
       const label = typeof t.label === 'function' ? t.label() : t.label;
       bar.appendChild(h('a', { href: t.hash, class: 'nav-item' + (on ? ' on' : '') }, h('span', { class: 'nav-icon' }, t.icon), h('span', null, label)));

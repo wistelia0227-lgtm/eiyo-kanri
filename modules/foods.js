@@ -171,6 +171,6 @@
       box);
   } });
 
-  App.registerNav({ order: 74, feature: 'menu', label: '食品', icon: '🥕', hash: '#/foods', match: ['foods'] });
+  App.registerNav({ order: 44, group: '献立と食材', feature: 'menu', label: '食品', icon: '🥕', hash: '#/foods', match: ['foods'] });
   window.Foods = F;
 })();

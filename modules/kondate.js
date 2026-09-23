@@ -237,6 +237,6 @@
       '重さと値段が空のままでも、業者だけ入れれば発注書を業者ごとに分けられます。'), box);
   } });
 
-  App.registerNav({ order: 71, feature: 'menu', label: '献立表', icon: '📋', hash: '#/kondate', match: ['kondate', 'order'] });
+  App.registerNav({ order: 41, group: '献立と食材', feature: 'menu', label: '献立表', icon: '📋', hash: '#/kondate', match: ['kondate', 'order'] });
   window.Kondate = K;
 })();

@@ -120,6 +120,6 @@
       h('div', { class: 'sub' }, '利用者ごとの被保険者番号と要介護度は、利用者の画面で入れます。'));
   } });
 
-  App.registerNav({ order: 27, feature: 'ncm', label: 'LIFE', icon: '📤', hash: '#/life', match: ['life'] });
+  App.registerNav({ order: 24, group: 'ひと', feature: 'ncm', label: 'LIFE', icon: '📤', hash: '#/life', match: ['life'] });
   window.LifeUi = X;
 })();

@@ -107,5 +107,5 @@
       h('div', { class: 'sub' }, '食事摂取基準: 日本人の食事摂取基準（' + (n ? n.DRI_VERSION : '') + '）'));
   } });
 
-  App.registerNav({ order: 80, feature: 'links', label: '情報', icon: '🔗', hash: '#/links', match: ['links'] });
+  App.registerNav({ order: 80, group: '', feature: 'links', label: '情報', icon: '🔗', hash: '#/links', match: ['links'] });
 })();
