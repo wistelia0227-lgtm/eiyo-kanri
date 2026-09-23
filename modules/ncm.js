@@ -126,7 +126,10 @@
 
     // 体重・身長を台帳と測定値から引いてくる
     const pull = h('button', { class: 'btn', onclick: async () => {
-      const list = (await DB.byIndex('measures', 'residentId', resident.id)).filter((x) => x.kind === 'weight')
+      const all = await DB.byIndex('measures', 'residentId', resident.id);
+      const alb = all.filter((x) => x.kind === 'alb' && x.date <= date.value).sort((a, b) => a.date.localeCompare(b.date)).slice(-1)[0];
+      if (alb) { r.alb = alb.value; }
+      const list = all.filter((x) => x.kind === 'weight')
         .sort((a, b) => a.date.localeCompare(b.date));
       const upto = list.filter((w) => w.date <= date.value);
       const cur = upto[upto.length - 1];

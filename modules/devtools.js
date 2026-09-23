@@ -45,6 +45,13 @@
     const ws = [];
     const curve = { 0: [46, 45.2, 44.5, 43.6, 42.4, 41.2, 39.8], 1: [58, 58.3, 58, 57.8, 58.1, 58, 57.6], 2: [38, 38.2, 38, 37.9, 38.1, 38, 0], 3: [47, 47, 46.8, 47.2, 47, 46.9, 47.1], 4: [55, 54.5, 54, 53.8, 53, 52.6, 52] };
     Object.keys(curve).forEach((i) => curve[i].forEach((kg, k) => { if (!kg) return; const d = M.addMonths(today, k - 6); ws.push({ id: list[i].id + '_w_' + d, residentId: list[i].id, kind: 'weight', date: d, value: kg, recordedAt: now }); }));
+    // 体重以外の測定値（アルブミン・ヘモグロビンなど）
+    [['alb', [3.8, 3.6, 3.4, 3.2, 3.0, 2.9]], ['hb', [12.1, 11.8, 11.5, 11.2, 10.9, 10.7]]].forEach((pair) => {
+      pair[1].forEach((v, k) => {
+        const d = M.addMonths(today, k - 5);
+        ws.push({ id: list[0].id + '_' + pair[0] + '_' + d, residentId: list[0].id, kind: pair[0], date: d, value: v, recordedAt: now });
+      });
+    });
     await DB.putMany('measures', ws);
     const rs = [];
     [0, 1, 2].forEach((i) => [0, -2].forEach((k) => rs.push({ id: list[i].id + '_' + day(k), residentId: list[i].id, date: day(k), mark: i === 0 && k === 0 ? 'oo' : 'o', meal: 'l', staple: i === 0 ? 5 : 10, side: i === 0 ? 4 : 9, note: i === 0 && k === 0 ? '汁物でむせ込み 2 回。きざみへの変更を看護師と相談。' : '', recordedAt: now })));
@@ -323,10 +330,25 @@
       ok('計画書の行もできる', planRows.length === 1 && planRows[0].plan_classification_01 === '1', planRows.length);
     }
 
+    // 測定値・補食・様式・プリセット
+    {
+      const y6 = res.find((r) => r.name === '山田 ハナ');
+      const md = await window.Measures.ofResident(y6.id);
+      ok('測定値が種類ごとに分かれる（体重・Alb・Hb）', md.weight.length === 7 && md.alb.length === 6 && md.hb.length === 6,
+        Object.keys(md).map((k) => k + ':' + md[k].length));
+      ok('基準から外れた値が分かる（Alb 2.9 は低い）', window.Measures.out('alb', 2.9) === 'low' && window.Measures.out('alb', 4.0) === '');
+      ok('測定の種類は 7 つ、体重は消せない', m2.measures.length === 7 && m2.measures[0].core === true);
+      const sup = await window.Supplements.collect(today);
+      ok('補食の配布表に鈴木さんが出る（高カロリーゼリー 15時）',
+        sup.rows.some((x) => x.r.name === '鈴木 トメ' && x.name === '高カロリーゼリー' && x.when === '15時'), sup.rows.map((x) => x.r.name));
+      ok('補食は時刻でまとまる', Object.keys(sup.byTime).length >= 1 && sup.byItem['高カロリーゼリー'] >= 1, Object.keys(sup.byTime));
+      ok('表示のプリセットが 3 つある', m2.nutrientPresets.length === 3 && m2.nutrientPresets[0].name === '栄養士', m2.nutrientPresets.map((p) => p.name));
+    }
+
     // 全画面が例外なく描ける
     for (const name of Object.keys(App.screens)) {
       const box = h('div'); let err = null;
-      try { await App.screens[name]((name === 'resident' || name === 'plan') ? [y.id] : [], box); } catch (e) { err = e.message; }
+      try { await App.screens[name]((['resident', 'plan', 'form411', 'form42'].indexOf(name) >= 0) ? [y.id] : [], box); } catch (e) { err = e.message; }
       ok('画面「' + name + '」が描ける', !err && box.childNodes.length > 0, err);
     }
     const bad = results.filter((r) => !r.ok).length;

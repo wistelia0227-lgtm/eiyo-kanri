@@ -43,6 +43,7 @@
       swallow: { need: false, code: '', thick: '' },
       caution: { has: false, text: '' },
       will: { motivation: 0, satisfaction: 0, attitude: 0 },
+      alb: null,
       issues: [], special: '', evaluation: '', planChange: false, glim: '',
       iji: null,
       recordedAt: 0 };
@@ -63,6 +64,7 @@
     const r = M.risk({
       bmi: bmi,
       loss: { m1: b.loss1, m3: b.loss3, m6: b.loss6 },
+      alb: rec.alb == null ? null : rec.alb,
       intake: (rec.intake && rec.intake.pct != null) ? rec.intake.pct : null,
       tube: !!(feeding && feeding.midRisk),
       pressureUlcer: !!b.ulcer

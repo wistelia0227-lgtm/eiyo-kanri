@@ -181,3 +181,20 @@ table.form-head th, table.form-body th { background: var(--head); white-space: n
 table.form-body td { min-height: 1.8rem; }
 table.form-body .w-date { width: 6rem; } table.form-body .w-who { width: 7rem; }
 table.plan-rows td { vertical-align: top; } table.plan-rows textarea { min-width: 12rem; }
+
+/* 様式の印刷（4-1-1 / 4-2） */
+.form-right { text-align: right; margin-bottom: .4rem; }
+.form-free { border: 1px solid #6b7280; min-height: 5rem; padding: .5rem; white-space: pre-wrap; margin-bottom: .6rem; }
+table.form411 th { text-align: left; white-space: nowrap; width: 15rem; }
+table.form411 td { text-align: center; min-width: 7rem; }
+table.form411 tr.sect th { background: #d1d5db; }
+table.form411 tr.strong td { font-weight: 700; }
+@media print { .form4 { border: 0; padding: 0; } table.form411 { font-size: .78rem; } .scroll-x { overflow: visible; } }
+
+/* 推移のグラフ */
+svg.chart { width: 100%; height: 150px; display: block; margin: .4rem 0; background: #fff; border: 1px solid var(--line); border-radius: 6px; }
+svg.chart .grid { stroke: #e5e7eb; stroke-width: 1; }
+svg.chart .ref { stroke: #f59e0b; stroke-width: 1; stroke-dasharray: 4 3; }
+svg.chart .line { fill: none; stroke: var(--primary); stroke-width: 2; }
+svg.chart .dot { fill: var(--primary); } svg.chart .dot.low { fill: var(--info); } svg.chart .dot.high { fill: var(--bad); }
+svg.chart .axis { font-size: 10px; fill: var(--sub); }

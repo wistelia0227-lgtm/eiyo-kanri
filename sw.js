@@ -1,6 +1,6 @@
 // オフラインで開けるようにする（https か localhost で配った時だけ登録される）。
 // 直した時は VERSION を上げる。古い版のファイルは activate で消える。
-const VERSION = 'v0.12';
+const VERSION = 'v0.13';
 const FILES = [
   './', './index.html', './css/style.css',
   './js/util.js', './js/model.js', './js/db.js', './js/profile.js',
@@ -10,7 +10,7 @@ const FILES = [
   './modules/ncm.js', './modules/careplan.js', './modules/life.js', './modules/census.js', './modules/home.js',
   './modules/cards.js', './modules/weights.js', './modules/rounds.js',
   './modules/foods.js', './modules/dishes.js', './modules/menu.js',
-  './modules/seed.js', './modules/links.js', './modules/settings.js', './modules/devtools.js',
+  './modules/seed.js', './modules/forms.js', './modules/measures.js', './modules/supplements.js', './modules/links.js', './modules/settings.js', './modules/devtools.js',
   './manifest.webmanifest', './icons/icon-192.png', './icons/icon-512.png'
 ];
 

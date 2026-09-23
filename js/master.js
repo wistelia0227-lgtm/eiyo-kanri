@@ -49,10 +49,26 @@
     // 低栄養リスクの判定値（厚生労働省 様式例の基準。変わったらここを直す）
     risk: { bmiMid: 18.5, loss: { m1: { mid: 3, high: 5 }, m3: { mid: 3, high: 7.5 }, m6: { mid: 3, high: 10 } }, albMid: 3.5, albHigh: 3.0, intakeMid: 75 },
     weightAlertKg: 2,
+    // 測定の種類。weight は消さない（体重の画面と低栄養リスクが使う）
+    measures: [
+      { id: 'weight', label: '体重', unit: 'kg', dec: 1, core: true },
+      { id: 'alb', label: '血清アルブミン', unit: 'g/dl', dec: 1, low: 3.5 },
+      { id: 'hb', label: 'ヘモグロビン', unit: 'g/dl', dec: 1, low: 11 },
+      { id: 'glu', label: '血糖', unit: 'mg/dl', dec: 0 },
+      { id: 'hba1c', label: 'HbA1c', unit: '%', dec: 1, high: 7 },
+      { id: 'cc', label: '下腿周囲長', unit: 'cm', dec: 1 },
+      { id: 'fat', label: '体脂肪率', unit: '%', dec: 1 }
+    ],
     phrases: null,            // 欄ごとの文例（js/phrases.js）
     life: null,               // LIFE の事業所情報（modules/life.js）
     ncm: null,                // 栄養ケアの期限（js/ncm.js の DEFAULT_INTERVALS）
-    nutrientKeys: null,      // 画面に出す栄養素（null = 基本の6つ）
+    nutrientKeys: null,
+    nutrientPresets: [   // 栄養価の見せ方（名前を付けて切り替える）
+      { name: '栄養士', keys: ['kcal', 'prot', 'fat', 'cho', 'fib', 'nacl', 'ca', 'fe', 'vita', 'b1', 'b2', 'vitc', 'k'] },
+      { name: '配膳', keys: ['kcal', 'prot', 'nacl'] },
+      { name: '基本', keys: ['kcal', 'prot', 'fat', 'cho', 'fib', 'nacl'] }
+    ],
+    nutrientPresetNow: '',      // 画面に出す栄養素（null = 基本の6つ）
     dishKinds: ['主食', '主菜', '副菜', '汁物', 'デザート', '飲み物'],
     dishMains: ['米・パン・めん', '魚', '肉', '卵', '豆・豆腐', '野菜', 'いも', '海藻・きのこ', '乳', '果物'],
     dishMethods: ['煮る', '焼く', '揚げる', '炒める', '蒸す', '和える', '汁', 'そのまま'],
