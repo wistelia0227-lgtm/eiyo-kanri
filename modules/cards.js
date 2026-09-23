@@ -191,6 +191,7 @@
     const slot = { d: date, m: mealId };
     const lay = M.item(m.cardLayouts, st.layout) || m.cardLayouts[0];
     const residents = await DB.residents();
+    if (window.Choice) await window.Choice.preload(date);   // 食札に「選んだ料理」を出せるようにする
     const cen = M.census(residents, slot, m);
     const changed = M.cardChangedIds(residents, date, m);
     const units = Array.from(new Set(cen.rows.map((x) => x.r.unit).filter(Boolean))).sort();

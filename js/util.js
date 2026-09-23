@@ -120,24 +120,25 @@
     return el;
   };
   // 文字列の並びを編集（チップ + 追加欄 + 候補）
-  U.chipList = function (values, suggestions, placeholder) {
+  U.chipList = function (values, suggestions, placeholder, onchange) {
     const list = values.slice();
     const box = h('div', { class: 'chips' });
     const id = U.uid('dl');
     const input = h('input', { class: 'input', type: 'text', placeholder: placeholder || '入力して Enter', list: id });
-    const add = () => { const v = input.value.trim(); if (v && list.indexOf(v) < 0) { list.push(v); draw(); } input.value = ''; };
+    const changed = () => { if (onchange) onchange(list.slice()); };
+    const add = () => { const v = input.value.trim(); if (v && list.indexOf(v) < 0) { list.push(v); draw(); changed(); } input.value = ''; };
     input.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); add(); } });
     input.addEventListener('change', add);
     function draw() {
       box.innerHTML = '';
       list.forEach((v, i) => box.appendChild(h('span', { class: 'chip' }, v,
-        h('button', { type: 'button', class: 'chip-x', title: '外す', onclick: () => { list.splice(i, 1); draw(); } }, '×'))));
+        h('button', { type: 'button', class: 'chip-x', title: '外す', onclick: () => { list.splice(i, 1); draw(); changed(); } }, '×'))));
     }
     draw();
     const el = h('div', { class: 'chiplist' }, box, input, h('datalist', { id: id }, (suggestions || []).map((s) => h('option', { value: s }))));
     el.get = () => { add(); return list.slice(); };
     el.peek = () => list.slice();
-    el.push = (v) => { if (v && list.indexOf(v) < 0) { list.push(v); draw(); } };
+    el.push = (v) => { if (v && list.indexOf(v) < 0) { list.push(v); draw(); changed(); } };
     return el;
   };
 

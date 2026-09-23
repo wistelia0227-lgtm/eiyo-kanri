@@ -398,6 +398,51 @@
       m2.prices = [];
     }
 
+    // 選択メニューと嗜好調査
+    {
+      const Cx = window.Choice, Mx = window.Menu;
+      const st = M.addDays(today, 30);
+      const rec = await Mx.get(st);
+      ok('選択メニューを置いていなければ null', !Cx.get(rec, 'l', 'jo'));
+      const dishes = await window.Dishes.all();
+      const a1 = dishes.find((d) => d.kind === '主菜') || dishes[0];
+      const a2 = dishes.filter((d) => d.kind === '主菜' && d !== a1)[0] || dishes[1];
+      rec.choice = { [Mx.cellKey('l', 'jo')]: { label: '主菜を選ぶ',
+        options: [{ id: 'oa', dishId: a1.id, name: a1.name }, { id: 'ob', dishId: a2.id, name: a2.name }] } };
+      await DB.put('menus', rec);
+      const rec2 = await Mx.get(st);
+      const ch = Cx.get(rec2, 'l', 'jo');
+      ok('選択メニューが残る（2 件）', ch && ch.options.length === 2, ch && ch.options.length);
+      ok('置けるのは 4 件まで', Cx.MAX === 4);
+      // 誰が何を選んだか
+      const d0 = { date: st, extra: {}, choice: { [Mx.cellKey('l', 'jo')]: { r1: 'oa', r2: 'ob', r3: 'oa' } } };
+      await DB.put('daily', d0);
+      const daily = await Cx.picksOf(st);
+      ok('選んだものが引ける', Cx.pickOf(daily, 'l', 'jo', 'r1') === 'oa' && Cx.pickOf(daily, 'l', 'jo', 'r2') === 'ob');
+      ok('聞いていない人は空', Cx.pickOf(daily, 'l', 'jo', 'r9') === '');
+      const t = Cx.tally(daily, 'l', 'jo', ch.options).apply(['r1', 'r2', 'r3', 'r9']);
+      ok('選んだ人数が数えられる（A 2人・B 1人・未 1人）', t.oa === 2 && t.ob === 1 && t.none === 1, t);
+      // 食札に「選んだ料理」を出せる
+      ok('食札の項目に「選んだ料理」がある', window.Cards.ITEMS.some((x) => x.id === 'choice'));
+      await Cx.preload(st);
+      const item = window.Cards.ITEMS.find((x) => x.id === 'choice');
+      ok('選んだ人はその料理名が出る',
+        item.get({ r: { id: 'r1' }, d: { shokushu: 'jo' }, slot: { d: st, m: 'l' }, m: m2 }) === a1.name,
+        item.get({ r: { id: 'r1' }, d: { shokushu: 'jo' }, slot: { d: st, m: 'l' }, m: m2 }));
+      ok('聞いていない人は「未選択」',
+        item.get({ r: { id: 'r9' }, d: { shokushu: 'jo' }, slot: { d: st, m: 'l' }, m: m2 }) === '未選択');
+      ok('選択メニューが無い食事は空',
+        item.get({ r: { id: 'r1' }, d: { shokushu: 'jo' }, slot: { d: st, m: 'b' }, m: m2 }) === '');
+      // 嗜好調査の欄
+      ok('嗜好調査の欄が 6 つ', Cx.KIKOU.length === 6, Cx.KIKOU.length);
+      ok('5 段階の欄は 3 つ、それぞれ言葉が 5 つ',
+        Cx.KIKOU.filter((f) => f.kind === 'five').length === 3
+        && Cx.KIKOU.filter((f) => f.kind === 'five').every((f) => f.words.length === 5));
+      // 片付け
+      delete rec2.choice; await DB.put('menus', rec2);
+      await DB.put('daily', { date: st, extra: {} });
+    }
+
     // 検収・在庫・受払い
     {
       const Sx = window.Stock;
@@ -480,7 +525,8 @@
     // 食札の中身（テンプレート）
     {
       const Cx = window.Cards;
-      ok('食札に載せられる項目が 18 ある', Cx.ITEMS.length === 18, Cx.ITEMS.length);
+      // 18 は食札モジュール自身の項目。選択メニュー（modules/choice.js）が「選んだ料理」を足して 19 になる
+      ok('食札に載せられる項目が 19 ある', Cx.ITEMS.length === 19, Cx.ITEMS.map(function (x) { return x.id; }));
       ok('初期は 帯3・本文2・指示8', Cx.DEFAULT_TEMPLATE.band.length === 3 && Cx.DEFAULT_TEMPLATE.main.length === 2
         && Cx.DEFAULT_TEMPLATE.do.length === 8, [Cx.DEFAULT_TEMPLATE.band.length, Cx.DEFAULT_TEMPLATE.main.length, Cx.DEFAULT_TEMPLATE.do.length]);
       ok('初期の並びの項目はすべて実在する', ['band', 'main', 'do'].every((k) => Cx.DEFAULT_TEMPLATE[k].every((id) => !!Cx.item(id))));
