@@ -47,6 +47,7 @@
     r.stays = r.stays || []; r.absences = r.absences || []; r.diet = r.diet || [];
     r.memo = r.memo || ''; r.archived = !!r.archived;
     r.energyRule = r.energyRule || null;   // 必要栄養量の出し方（js/nutri.js の N.personalNeed）
+    r.intake = r.intake || null;           // 入所時の聞き取り（modules/intake.js）
     return r;
   };
   M.emptyDiet = function () {

@@ -398,6 +398,32 @@
       m2.prices = [];
     }
 
+    // 入所時の聞き取り
+    {
+      const Ix = window.Intake;
+      ok('聞き取りの欄が 9 かたまり', Ix.GROUPS.length === 9, Ix.GROUPS.length);
+      ok('欄の合計は 45 以上（実物 2 様式の合わせ）', Ix.allFields().length >= 45, Ix.allFields().length);
+      ok('欄の id が重複していない', (function () {
+        const ids = Ix.allFields().map((f) => f.id);
+        return ids.length === ids.filter((x, i) => ids.indexOf(x) === i).length;
+      })());
+      const v = { shokushu: 'dm', staple: 'kayu', stapleG: 120, side: 'kizami', drinkThick: 'mid', assist: 'part',
+        tools: ['スプーン'], allergy: ['えび'], kinshi: ['牛乳'], suppName: '高カロリーゼリー',
+        sideWord: 'きざみ 1cm角', thickWord: 'ポタージュ状', swWay: ['交互嚥下'], drugNg: 'ワルファリンのため納豆' };
+      const d = Ix.toDiet(v, null);
+      ok('食種・主食・副食・とろみが食事情報に写る',
+        d.shokushu === 'dm' && d.staple === 'kayu' && d.stapleG === 120 && d.side === 'kizami' && d.drinkThick === 'mid', d);
+      ok('禁食は {food, sub} の形になる', d.kinshi.length === 1 && d.kinshi[0].food === '牛乳' && d.kinshi[0].sub === '', d.kinshi);
+      ok('アレルギーと食具も写る', d.allergy[0] === 'えび' && d.tools[0] === 'スプーン');
+      ok('補助食品が補食に入る', d.supplements.length === 1 && d.supplements[0].name === '高カロリーゼリー', d.supplements);
+      ok('前の施設の言葉と注意は食札の注意にまとまる',
+        /きざみ 1cm角/.test(d.notes) && /ポタージュ状/.test(d.notes) && /交互嚥下/.test(d.notes) && /ワルファリン/.test(d.notes), d.notes);
+      const d0 = Ix.toDiet({}, null);
+      ok('空の聞き取りは何も上書きしない', !d0.shokushu && !d0.staple && !d0.notes, d0);
+      ok('まだ書いていない人は「なし」', !Ix.filled({ intake: null }) && !Ix.filled({ intake: {} }));
+      ok('1 つでも入っていれば「あり」', Ix.filled({ intake: { sw: 'むせ込みあり' } }));
+    }
+
     // 個人別の必要栄養量
     {
       const y7 = res.find((r) => r.name === '山田 ハナ');
