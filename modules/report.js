@@ -8,7 +8,7 @@
   const FG = window.FoodGroup, Foods = window.Foods, Dishes = window.Dishes, Menu = window.Menu, App = window.App;
   const ms = () => window.Master.current;
   const R = {};
-  let tab = 'comp', shokushu = '', month = '';
+  let tab = 'comp', shokushu = '', month = '', mode = 'plan';
 
   R.TABS = [{ id: 'comp', label: '食品構成表' }, { id: 'out', label: '栄養出納表（月報）' }, { id: 'kanri', label: '栄養管理報告書' }];
 
@@ -28,10 +28,10 @@
   };
 
   // その日・その食種の材料（1 人分に直したもの）を集める
-  R.itemsOfDay = function (rec, meals, sId, dishMap) {
+  R.itemsOfDay = function (rec, meals, sId, dishMap, md) {
     const out = [];
     meals.forEach((ml) => {
-      Menu.cellDishes(rec, ml.id, sId).forEach((c) => {
+      Menu.dishesBy(rec, ml.id, sId, md).forEach((c) => {
         const d = dishMap[c.dishId];
         if (!d) return;
         const per = Math.max(1, Number(d.servings) || 1), x = (c.x == null ? 1 : Number(c.x)) || 0;
@@ -42,7 +42,7 @@
   };
 
   // 期間ぶんを 1 回で集める。献立が空の日は数に入れない（平均が薄まるため）
-  R.gather = async function (days, sId) {
+  R.gather = async function (days, sId, md) {
     const m = ms(), meals = M.activeMeals(m);
     const dishMap = {};
     (await Dishes.all()).forEach((d) => { dishMap[d.id] = d; });
@@ -51,7 +51,7 @@
     let group = FG.emptyTally(), nut = N.empty(), filled = 0;
     for (const d of days) {
       const rec = await Menu.get(d);
-      const items = R.itemsOfDay(rec, meals, sId, dishMap);
+      const items = R.itemsOfDay(rec, meals, sId, dishMap, md);
       if (!items.length) { perDay.push({ date: d, empty: true }); continue; }
       filled++;
       items.forEach((it) => itemsAll.push(it));
@@ -60,7 +60,7 @@
       perDay.push({ date: d, empty: false, group: g, nut: s });
     }
     const k = 1 / Math.max(1, filled);
-    return { perDay: perDay, filled: filled, days: days, itemsAll: itemsAll,
+    return { perDay: perDay, filled: filled, days: days, itemsAll: itemsAll, mode: md || 'plan',
       group: group, nut: nut, avgGroup: FG.scaleTally(group, k), avgNut: N.scale(nut, k), dishMap: dishMap, classify: classify };
   };
 
@@ -76,7 +76,10 @@
       h('button', { class: 'btn', onclick: () => { month = R.monthNow(); App.refresh(); } }, '今月'),
       h('button', { class: 'btn', onclick: () => { month = R.addMonth(ym, 1); App.refresh(); } }, '次月 ▶'),
       h('span', { class: 'gap' }), h('span', { class: 'sub' }, '食種'),
-      U.select(m.shokushu, sId, { noEmpty: true, onchange: (e) => { shokushu = e.target.value; App.refresh(); } })));
+      U.select(m.shokushu, sId, { noEmpty: true, onchange: (e) => { shokushu = e.target.value; App.refresh(); } }),
+      h('span', { class: 'gap' }), h('span', { class: 'sub' }, '何の量か'),
+      window.Menu.MODES.map((x) => h('button', { class: 'btn seg' + (mode === x.id ? ' on' : ''),
+        onclick: () => { mode = x.id; App.refresh(); } }, x.label))));
   }
 
   // 群の表（目標と実績）
@@ -110,7 +113,7 @@
     const sId = shokushu || (m.shokushu[0] && m.shokushu[0].id);
     if (!sId) { root.appendChild(h('div', { class: 'empty' }, '食種がありません。設定 → 呼び方（マスタ）で足してください。')); return; }
     const days = R.daysOf(ym);
-    const data = await R.gather(days, sId);
+    const data = await R.gather(days, sId, mode);
     head(root, sId, ym);
 
     if (!data.filled) {
@@ -118,7 +121,9 @@
         ' ', h('a', { class: 'btn no-print', href: '#/menu/' + days[0] }, '献立を開く')));
       return;
     }
-    root.appendChild(h('div', { class: 'sub' }, '献立が入っている ' + data.filled + ' 日ぶんで計算しました（' + days.length + ' 日中）。'));
+    const modeLabel = (window.Menu.MODES.find((x) => x.id === mode) || {}).label || '予定';
+    root.appendChild(h('div', { class: 'sub' }, '献立が入っている ' + data.filled + ' 日ぶんの「' + modeLabel + '」で計算しました（' + days.length + ' 日中）。' +
+      (mode === 'eaten' ? '　残食率を入れていない料理は、そのままの量で数えています。' : '')));
 
     if (tab === 'comp') return drawComp(root, data, sId, ym);
     if (tab === 'out') return drawOut(root, data, sId, ym);

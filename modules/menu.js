@@ -12,6 +12,38 @@
   Menu.cellKey = (mealId, sId) => mealId + '/' + sId;
   Menu.get = async function (date) { return (await DB.get('menus', date)) || { date: date, cells: {} }; };
   Menu.cellDishes = function (rec, mealId, sId) { return (rec.cells && rec.cells[Menu.cellKey(mealId, sId)]) || []; };
+
+  // ---- 実施献立と残食 ----
+  // 予定献立表は計画書、実施献立表は「実際に何を出したか」。食材が変わったら訂正して残す決まり（調査 02 の 5.2）。
+  // 予定と同じ日がほとんどなので、違う日だけ actual に持つ（無ければ予定がそのまま実施）。
+  //   rec.actual = { '食事ID/食種ID': [{dishId, name, x}] }   実施した料理
+  //   rec.left   = { '食事ID/食種ID': { 料理ID: 残食率(%) } }  出した量のうち残った割合
+  //   rec.actualNote = { '食事ID/食種ID': '変更の理由' }
+  Menu.hasActual = function (rec, mealId, sId) { return !!(rec.actual && rec.actual[Menu.cellKey(mealId, sId)]); };
+  Menu.actualDishes = function (rec, mealId, sId) {
+    const a = rec.actual && rec.actual[Menu.cellKey(mealId, sId)];
+    return a || Menu.cellDishes(rec, mealId, sId);
+  };
+  Menu.leftOf = function (rec, mealId, sId, dishId) {
+    const l = rec.left && rec.left[Menu.cellKey(mealId, sId)];
+    const v = l && l[dishId];
+    return v == null ? null : Number(v);
+  };
+  // 残食を引いた「食べられた分」の料理の並び。x に (1 - 残食率) を掛ける
+  Menu.eatenDishes = function (rec, mealId, sId) {
+    return Menu.actualDishes(rec, mealId, sId).map((c) => {
+      const p = Menu.leftOf(rec, mealId, sId, c.dishId);
+      const k = p == null ? 1 : Math.max(0, 1 - p / 100);
+      return { dishId: c.dishId, name: c.name, x: (c.x == null ? 1 : Number(c.x)) * k };
+    });
+  };
+  // mode: 'plan'=予定 / 'actual'=実施 / 'eaten'=推定摂取（実施 − 残食）
+  Menu.dishesBy = function (rec, mealId, sId, mode) {
+    if (mode === 'actual') return Menu.actualDishes(rec, mealId, sId);
+    if (mode === 'eaten') return Menu.eatenDishes(rec, mealId, sId);
+    return Menu.cellDishes(rec, mealId, sId);
+  };
+  Menu.MODES = [{ id: 'plan', label: '予定' }, { id: 'actual', label: '実施' }, { id: 'eaten', label: '推定摂取' }];
   // 1 食分の栄養価
   Menu.sumCell = function (list, dishMap) {
     let s = N.empty();
@@ -22,9 +54,9 @@
     });
     return s;
   };
-  Menu.sumDay = function (rec, meals, sId, dishMap) {
+  Menu.sumDay = function (rec, meals, sId, dishMap, mode) {
     let s = N.empty();
-    meals.forEach((ml) => { s = N.add(s, Menu.sumCell(Menu.cellDishes(rec, ml.id, sId), dishMap)); });
+    meals.forEach((ml) => { s = N.add(s, Menu.sumCell(Menu.dishesBy(rec, ml.id, sId, mode), dishMap)); });
     return s;
   };
   // 使われている料理に含まれるアレルギー品目

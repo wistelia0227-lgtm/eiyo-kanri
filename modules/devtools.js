@@ -398,6 +398,57 @@
       m2.prices = [];
     }
 
+    // 実施献立表と残食（喫食）調査
+    {
+      const Mx = window.Menu, Jx = window.Jisshi;
+      const st = M.addDays(today, 30);       // 上でサイクル献立を入れた日
+      const rec = await Mx.get(st);
+      const key = Mx.cellKey('l', 'jo');
+      const plan = Mx.cellDishes(rec, 'l', 'jo');
+      ok('予定の料理がある', plan.length >= 3, plan.length);
+      ok('実施を入れていなければ 実施＝予定', !Mx.hasActual(rec, 'l', 'jo')
+        && Mx.actualDishes(rec, 'l', 'jo').length === plan.length);
+      // 実施を直す（1 品を外す）
+      rec.actual = rec.actual || {};
+      rec.actual[key] = JSON.parse(JSON.stringify(plan)).slice(0, plan.length - 1);
+      await DB.put('menus', rec);
+      const rec2 = await Mx.get(st);
+      ok('実施だけ変えても予定は残る', Mx.cellDishes(rec2, 'l', 'jo').length === plan.length
+        && Mx.actualDishes(rec2, 'l', 'jo').length === plan.length - 1,
+        [Mx.cellDishes(rec2, 'l', 'jo').length, Mx.actualDishes(rec2, 'l', 'jo').length]);
+      ok('予定と違うことが分かる', Mx.hasActual(rec2, 'l', 'jo'));
+      // 残食率
+      const first = Mx.actualDishes(rec2, 'l', 'jo')[0];
+      rec2.left = { [key]: { [first.dishId]: 50 } };
+      await DB.put('menus', rec2);
+      const rec3 = await Mx.get(st);
+      ok('残食率が残る', Mx.leftOf(rec3, 'l', 'jo', first.dishId) === 50, Mx.leftOf(rec3, 'l', 'jo', first.dishId));
+      const eaten = Mx.eatenDishes(rec3, 'l', 'jo');
+      ok('残食 50% の料理は人数分が半分になる', eaten[0].x === 0.5, eaten[0].x);
+      ok('残食を入れていない料理はそのまま', eaten[1].x === 1, eaten[1].x);
+      ok('残食率 0（完食）でも減らない', (function () {
+        const t = JSON.parse(JSON.stringify(rec3));
+        t.left[key][first.dishId] = 0;
+        return Mx.eatenDishes(t, 'l', 'jo')[0].x === 1;
+      })());
+      // 1 日分の合計が 予定 > 実施 > 推定摂取 の順になる
+      const dm4 = {}; (await window.Dishes.all()).forEach((d) => { dm4[d.id] = d; });
+      const kPlan = Mx.sumDay(rec3, M.activeMeals(m2), 'jo', dm4, 'plan').values.kcal;
+      const kAct = Mx.sumDay(rec3, M.activeMeals(m2), 'jo', dm4, 'actual').values.kcal;
+      const kEat = Mx.sumDay(rec3, M.activeMeals(m2), 'jo', dm4, 'eaten').values.kcal;
+      ok('予定 > 実施 > 推定摂取', kPlan > kAct && kAct > kEat, [kPlan, kAct, kEat]);
+      // 帳票も同じ切り替えで集計できる
+      const gP = await window.Report.gather([st], 'jo', 'plan');
+      const gE = await window.Report.gather([st], 'jo', 'eaten');
+      ok('帳票が 推定摂取 でも集計できる', gE.avgNut.values.kcal < gP.avgNut.values.kcal,
+        [Math.round(gP.avgNut.values.kcal), Math.round(gE.avgNut.values.kcal)]);
+      ok('推定摂取では食品群の重さも減る', gE.avgGroup.total < gP.avgGroup.total,
+        [Math.round(gP.avgGroup.total), Math.round(gE.avgGroup.total)]);
+      ok('残食率の目盛りが 6 段階', Jx.STEPS.length === 6 && Jx.stepLabel(0) === '完食' && Jx.stepLabel(100) === '全残', Jx.STEPS);
+      // 片付け
+      delete rec3.actual; delete rec3.left; await DB.put('menus', rec3);
+    }
+
     // 食札の中身（テンプレート）
     {
       const Cx = window.Cards;
