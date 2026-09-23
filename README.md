@@ -34,7 +34,7 @@
 
 - 使い方: `README_使い方.txt`
 - 企画と調査の結果: `docs/PLAN.md`
-- 計算の試験: `node tools/test_model.js` `test_nutri.js` `test_ncm.js` `test_life.js` `test_foodgroup.js` ／ 画面: `index.html?selftest`
+- 計算の試験: `node tools/test_model.js` `test_nutri.js` `test_ncm.js` `test_life.js` `test_foodgroup.js` ／ 配りものの点検: `test_files.js` ／ 画面: `index.html?selftest`
 
 ## データの出典
 

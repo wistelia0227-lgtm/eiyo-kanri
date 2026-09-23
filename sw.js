@@ -2,19 +2,23 @@
 // 直した時は VERSION を上げる。古い版のファイルは activate で消える。
 //
 // 取り方の方針:
-//  - 画面と JavaScript・CSS は「まずネット、だめならキャッシュ」。直した版がすぐ届く
+//  - 画面と JavaScript・CSS は「まずネット、だめならキャッシュ」。直した版がすぐ届く。
+//    このとき cache:'no-store' を付ける。付けないとブラウザの HTTP キャッシュが返ってきて、
+//    GitHub Pages の max-age=600 のせいで「新しい画面＋古い JavaScript」の取り合わせになる（実際に起きた）
 //  - 大きくて変わらないもの（成分表 1MB、初期データ、LIFE の項目定義、アイコン）は「まずキャッシュ」。速さ優先。
 //    こちらは VERSION を上げた時に入れ替わる
-const VERSION = 'v0.17';
+const VERSION = 'v0.18';
 const FILES = [
   './', './index.html', './css/style.css',
   './js/util.js', './js/model.js', './js/db.js', './js/profile.js',
-  './js/foods_data.js', './js/nutri.js', './js/ncm.js', './js/life_spec.js', './js/life.js', './js/phrases.js',
+  './js/foods_data.js', './js/nutri.js', './js/foodgroup.js', './js/amounts.js',
+  './js/ncm.js', './js/life_spec.js', './js/life.js', './js/phrases.js',
   './js/dishes_seed.js', './js/master.js', './js/view.js', './js/app.js',
   './modules/board.js', './modules/facility.js', './modules/residents.js',
   './modules/ncm.js', './modules/careplan.js', './modules/life.js', './modules/census.js', './modules/home.js',
   './modules/cards.js', './modules/weights.js', './modules/rounds.js',
   './modules/foods.js', './modules/dishes.js', './modules/menu.js',
+  './modules/intake.js', './modules/needs.js', './modules/kondate.js', './modules/report.js', './modules/journal.js',
   './modules/seed.js', './modules/forms.js', './modules/measures.js', './modules/supplements.js',
   './modules/links.js', './modules/settings.js', './modules/devtools.js',
   './manifest.webmanifest', './icons/icon-192.png', './icons/icon-512.png'
@@ -22,7 +26,10 @@ const FILES = [
 const CACHE_FIRST = /(foods_data[.]js|dishes_seed[.]js|life_spec[.]js|icons[/])/;
 
 self.addEventListener('install', (e) => {
-  e.waitUntil(caches.open(VERSION).then((c) => c.addAll(FILES)).then(() => self.skipWaiting()));
+  // no-store で取り直す（HTTP キャッシュに残っている古い版を入れないため）
+  e.waitUntil(caches.open(VERSION)
+    .then((c) => c.addAll(FILES.map((f) => new Request(f, { cache: 'no-store' }))))
+    .then(() => self.skipWaiting()));
 });
 self.addEventListener('activate', (e) => {
   e.waitUntil(caches.keys()
@@ -43,7 +50,7 @@ self.addEventListener('fetch', (e) => {
     return;
   }
   e.respondWith(
-    fetch(e.request).then((res) => {
+    fetch(new Request(e.request.url, { cache: 'no-store', credentials: 'same-origin' })).then((res) => {
       const copy = res.clone();
       caches.open(VERSION).then((c) => c.put(e.request, copy)).catch(() => {});
       return res;
