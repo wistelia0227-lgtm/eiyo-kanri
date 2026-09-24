@@ -11,7 +11,36 @@ function ok(name, cond, extra) { n++; if (!cond) { bad++; console.log('NG  ' + n
 
 ok('成分表が読める（2538 食品）', N.count() === 2538, N.count());
 ok('出典の表記がある', /増補2023年/.test(N.meta.citation), N.meta.citation);
-ok('成分は 52 項目', N.nutrients.length === 52, N.nutrients.length);
+ok('成分は 59 項目（本表 54 ＋ 脂肪酸成分表の総量 5）', N.nutrients.length === 59, N.nutrients.length);
+ok('本表で足りない項目が無い（カロテンの内わけ・トコフェロールの内わけ・kJ）',
+  ['kj', 'carta', 'cartb', 'crypxb', 'tocphb', 'tocphg', 'tocphd'].every((k) => N.key[k] != null),
+  ['kj', 'carta', 'cartb', 'crypxb', 'tocphb', 'tocphg', 'tocphd'].filter((k) => N.key[k] == null));
+ok('β-カロテン当量は内わけと辻褄が合う（にんじん）', (function () {
+  const f = N.get('06214');
+  const a = N.val(f, 'carta'), b = N.val(f, 'cartb'), c = N.val(f, 'crypxb'), eq = N.val(f, 'cartbeq');
+  // β-カロテン当量 = β-カロテン ＋ 1/2 α-カロテン ＋ 1/2 β-クリプトキサンチン
+  return Math.abs((b + a / 2 + c / 2) - eq) <= 1;
+})(), (function () { const f = N.get('06214'); return [N.val(f, 'carta'), N.val(f, 'cartb'), N.val(f, 'crypxb'), N.val(f, 'cartbeq')]; })());
+// kJ は kcal × 4.184 ではない。八訂は kJ と kcal を別々の換算係数で出している
+// （たんぱく質 17 kJ に対し 4 kcal = 16.7 kJ など）。実測すると比は 4.01〜4.28 に散る
+ok('kJ が入っていて、kcal との比が 4.0〜4.3 に収まる', (function () {
+  let n = 0, out = 0;
+  global.FOODS_DATA.foods.forEach((x) => {
+    const f = N.get(x[0]);
+    const k = N.val(f, 'kcal'), j = N.val(f, 'kj');
+    if (!k || !j || k < 100) return;
+    n++;
+    const r = j / k;
+    if (r < 4.0 || r > 4.3) out++;
+  });
+  return n > 1500 && out === 0;
+})());
+ok('本表に値が無い（第3章参照）は「*」の印が付く', (function () {
+  const f = N.get('06371');
+  return N.val(f, 'iod') === null && N.flag(f, 'iod') === '*';
+})(), [N.val(N.get('06371'), 'iod'), N.flag(N.get('06371'), 'iod')]);
+ok('別冊は 3 つ', N.DETAILS.length === 3 && N.DETAILS.map((x) => x.id).join() === 'amino,fat,carb', N.DETAILS.map((x) => x.id));
+ok('読む前は未読', !N.detailLoaded('amino') && N.detailOf('amino', '01088') === null);
 
 // 食品を引く
 const rice = N.get('01088'); // こめ [水稲めし] 精白米 うるち米

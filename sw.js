@@ -7,7 +7,7 @@
 //    GitHub Pages の max-age=600 のせいで「新しい画面＋古い JavaScript」の取り合わせになる（実際に起きた）
 //  - 大きくて変わらないもの（成分表 1MB、初期データ、LIFE の項目定義、アイコン）は「まずキャッシュ」。速さ優先。
 //    こちらは VERSION を上げた時に入れ替わる
-const VERSION = 'v0.25';
+const VERSION = 'v0.26';
 const FILES = [
   './', './index.html', './css/style.css',
   './js/util.js', './js/model.js', './js/db.js', './js/profile.js',
@@ -23,7 +23,7 @@ const FILES = [
   './modules/links.js', './modules/settings.js', './modules/devtools.js',
   './manifest.webmanifest', './icons/icon-192.png', './icons/icon-512.png'
 ];
-const CACHE_FIRST = /(foods_data[.]js|dishes_seed[.]js|life_spec[.]js|icons[/])/;
+const CACHE_FIRST = /(foods_data[.]js|foods_amino[.]js|foods_fat[.]js|foods_carb[.]js|dishes_seed[.]js|life_spec[.]js|icons[/])/;
 
 self.addEventListener('install', (e) => {
   // no-store で取り直す（HTTP キャッシュに残っている古い版を入れないため）

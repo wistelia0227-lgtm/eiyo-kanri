@@ -25,6 +25,7 @@
   // 成分の値を 1 つ表示（未測定・微量・推定を記号で示す）
   F.cell = function (food, key) {
     const v = N.val(food, key), fl = N.flag(food, key);
+    if (v == null && fl === '*') return h('span', { class: 'sub', title: '本表に値が無い（備考の「第3章参照」）' }, '＊');
     if (v == null) return h('span', { class: 'sub', title: '未測定' }, '−');
     const t = N.fmt(key, v);
     if (fl === 't' || fl === 'T') return h('span', { title: '微量（Tr）' }, 'Tr');
@@ -91,7 +92,9 @@
       box.appendChild(h('div', { class: 'sub' }, rows.length + ' 件' + (rows.length >= 200 ? '（多いので 200 件まで）' : '') + '　数値は可食部 100g 当たり'));
       box.appendChild(h('div', { class: 'scroll-x' }, h('table', { class: 'grid foods' },
         h('thead', null, h('tr', null, h('th', null, '食品番号'), h('th', null, '食品名'), keys.map((k) => h('th', null, F.nutrient(k).name, h('div', { class: 'wd' }, F.nutrient(k).unit))))),
-        h('tbody', null, rows.map((f) => h('tr', null, h('td', { class: 'sub' }, f.no), h('th', null, f.name, f.remark ? h('div', { class: 'sub' }, f.remark) : null),
+        h('tbody', null, rows.map((f) => h('tr', null,
+          h('td', { class: 'sub' }, f.no, h('div', null, h('button', { class: 'btn small no-print', onclick: () => F.detail(f) }, '詳しく'))),
+          h('th', null, f.name, f.remark ? h('div', { class: 'sub' }, f.remark) : null),
           keys.map((k) => h('td', null, F.cell(f, k)))))))));
     };
     input.addEventListener('input', draw);
@@ -101,6 +104,55 @@
     draw();
     root.appendChild(h('div', { class: 'sub credit' }, '−＝未測定（含まれている可能性があります）　Tr＝微量　( )＝推定値・計算値　／　' + N.meta.citation));
   });
+
+  // 1 食品の詳しい表（本表の全項目 ＋ 別冊。別冊は開いた時に読む）
+  F.detail = function (food) {
+    const box = h('div');
+    let tab = 'main';
+    const draw = async () => {
+      box.innerHTML = '';
+      box.appendChild(h('div', { class: 'toolrow no-print' },
+        [{ id: 'main', label: '本表（' + N.nutrients.length + ' 項目）' }].concat(N.DETAILS).map((t) =>
+          h('button', { class: 'btn seg' + (tab === t.id ? ' on' : ''), onclick: async () => { tab = t.id; await draw(); } }, t.label))));
+      if (tab === 'main') {
+        box.appendChild(h('table', { class: 'list bordered' },
+          h('thead', null, h('tr', null, ['成分', '値', '単位'].map((t) => h('th', null, t)))),
+          h('tbody', null, N.nutrients.map((x) => h('tr', null,
+            h('th', null, x.name), h('td', { class: 'num' }, F.cell(food, x.key)), h('td', { class: 'sub' }, x.unit))))));
+        return;
+      }
+      const def = N.DETAILS.find((x) => x.id === tab);
+      if (!N.detailLoaded(tab)) {
+        box.appendChild(h('div', { class: 'sub' }, def.label + 'を読み込んでいます…'));
+        try { await N.loadDetail(tab); } catch (e) {
+          box.appendChild(h('div', { class: 'card bad' }, e.message));
+          return;
+        }
+        await draw();
+        return;
+      }
+      const list = N.detailOf(tab, food.no);
+      if (!list || !list.length) {
+        box.appendChild(h('div', { class: 'empty' }, 'この食品は' + def.label + 'の表に載っていません。'));
+        return;
+      }
+      const shown = list.filter((x) => x.value != null);
+      box.appendChild(h('div', { class: 'sub' }, '値のある項目 ' + shown.length + ' / ' + list.length));
+      box.appendChild(h('table', { class: 'list bordered' },
+        h('thead', null, h('tr', null, ['成分', '値', '単位'].map((t) => h('th', null, t)))),
+        h('tbody', null, list.map((x) => h('tr', { class: x.value == null ? 'sub' : '' },
+          h('th', null, x.name),
+          h('td', { class: 'num' }, x.value == null ? h('span', { class: 'sub', title: '未測定' }, '−')
+            : (x.flag === 'e' ? h('span', { class: 'est', title: '推定値・計算値' }, '(' + x.value + ')')
+              : ((x.flag === 't' || x.flag === 'T') ? h('span', { title: '微量（Tr）' }, 'Tr') : String(x.value)))),
+          h('td', { class: 'sub' }, x.unit))))));
+    };
+    draw();
+    let close;
+    close = U.modal(h('div', null, h('h2', null, food.name), h('div', { class: 'sub' }, food.no + '　' + food.groupName + '　可食部 100g 当たり'),
+      box, h('div', { class: 'sub' }, N.meta.citation),
+      h('div', { class: 'modal-btns' }, h('button', { class: 'btn primary', onclick: () => close() }, '閉じる'))), { wide: true });
+  };
 
   // 表示のプリセット（献ダテマン・メニューリンクが「ID ごとに表示設定を持つ」としている所。
   // 1 台・1 人で使う前提なので、名前を付けて切り替える形にした）

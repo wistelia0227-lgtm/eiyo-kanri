@@ -398,6 +398,24 @@
       m2.prices = [];
     }
 
+    // 成分表の別冊（アミノ酸・脂肪酸の内訳・糖類の内訳）
+    {
+      ok('本表は 59 項目', window.Nutri.nutrients.length === 59, window.Nutri.nutrients.length);
+      const got = await window.Nutri.loadDetail('amino');
+      ok('アミノ酸の別冊を読める', !!got && got.meta.count > 1900, got && got.meta.count);
+      ok('読んだら「読んだ」と分かる', window.Nutri.detailLoaded('amino'));
+      const list = window.Nutri.detailOf('amino', '12004');   // 鶏卵 全卵 生
+      ok('鶏卵のアミノ酸が 24 項目出る', list.length === 24, list.length);
+      const lys = list.find((x) => x.key === 'lys');
+      ok('リシンに値がある', lys && lys.value > 0 && lys.unit === 'mg', lys);
+      ok('別冊に無い食品は空の並び', window.Nutri.detailOf('amino', '99999').length === 0);
+      ok('読んでいない別冊は null', window.Nutri.detailOf('carb', '12004') === null);
+      await window.Nutri.loadDetail('carb');
+      const c = window.Nutri.detailOf('carb', '01088');       // こめ 水稲めし 精白米
+      ok('ごはんの でん粉 が取れる', c.find((x) => x.key === 'starch').value > 0, c.find((x) => x.key === 'starch'));
+      ok('二度読んでも同じもの', (await window.Nutri.loadDetail('amino')).meta.count === got.meta.count);
+    }
+
     // まとめて取り込み
     {
       const Bx = window.Bulk;

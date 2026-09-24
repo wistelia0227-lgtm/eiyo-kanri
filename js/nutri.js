@@ -39,7 +39,7 @@
     const v = food.raw[N.HEAD_LEN + i];
     return v == null ? null : v;
   };
-  // その成分がどう書かれていたか: '.'=実測 'e'=推定 't'/'T'=Tr(微量) '-'=未測定 'd'=脚注
+  // その成分がどう書かれていたか: '.'=実測 'e'=推定 't'/'T'=Tr(微量) '-'=未測定 'd'=脚注 '*'=本表に値が無い（備考の第3章参照）
   N.flag = function (food, key) {
     const i = N.key[key];
     if (i == null || !food) return '.';
@@ -51,6 +51,52 @@
     const parts = String(name || '').replace(/　/g, ' ').split(/\s+/).filter(Boolean)
       .filter((w) => !/^[＜(（[［].*[＞)）\]］]$/.test(w));
     return parts.join(' ') || String(name || '');
+  };
+
+  // ---- 別冊（アミノ酸・脂肪酸の内訳・糖類の内訳）----
+  // 本表だけで約 1MB ある。別冊は使う場面が限られるので、開いた時に読む。
+  // fetch ではなく <script> で読むのは、file:// で開いたときに fetch が使えないため。
+  N.DETAILS = [
+    { id: 'amino', label: 'アミノ酸', file: 'js/foods_amino.js', global: 'FOODS_AMINO' },
+    { id: 'fat', label: '脂肪酸の内訳', file: 'js/foods_fat.js', global: 'FOODS_FAT' },
+    { id: 'carb', label: '糖類の内訳', file: 'js/foods_carb.js', global: 'FOODS_CARB' }
+  ];
+  const loaded = {}, loading = {};
+  N.detailLoaded = (id) => !!loaded[id];
+  N.loadDetail = function (id) {
+    const def = N.DETAILS.find((x) => x.id === id);
+    if (!def) return Promise.reject(new Error('知らない別冊: ' + id));
+    if (loaded[id]) return Promise.resolve(loaded[id]);
+    if (loading[id]) return loading[id];
+    loading[id] = new Promise(function (resolve, reject) {
+      if (typeof document === 'undefined') { reject(new Error('画面でのみ読めます')); return; }
+      const s = document.createElement('script');
+      s.src = def.file;
+      s.onload = function () {
+        const data = root[def.global];
+        if (!data) { reject(new Error(def.file + ' を読めませんでした')); return; }
+        data.index = {};
+        data.foods.forEach((r) => { data.index[r[0]] = r; });
+        data.key = {};
+        data.meta.nutrients.forEach((x, i) => { data.key[x.key] = i; });
+        loaded[id] = data;
+        resolve(data);
+      };
+      s.onerror = function () { reject(new Error(def.file + ' が見つかりません')); };
+      document.head.appendChild(s);
+    });
+    return loading[id];
+  };
+  // 別冊の 1 食品ぶん。[{key, name, unit, value, flag}]。読み込み前は null
+  N.detailOf = function (id, no) {
+    const data = loaded[id];
+    if (!data) return null;
+    const row = data.index[no];
+    if (!row) return [];
+    const head = data.meta.head.length;   // ['no','flags']
+    return data.meta.nutrients.map((x, i) => ({ key: x.key, name: x.name, unit: x.unit,
+      value: row[head + i] == null ? null : row[head + i],
+      flag: (row[1] || '')[i] || '.' }));
   };
 
   // 検索: 空白区切りの語をすべて含むもの。ひらがな・カタカナ・全角半角の違いを吸収する
