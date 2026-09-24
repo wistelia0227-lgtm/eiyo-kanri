@@ -137,6 +137,7 @@
     ok('バックアップから戻すと同じ人数・同じ測定数', (await DB.getAll('residents')).length === 8 && (await DB.getAll('measures')).length === dump.stores.measures.length);
     let refused = false; try { await DB.importAll({ app: 'other' }); } catch (e) { refused = true; }
     ok('別アプリのファイルは断る', refused);
+
     // 事業所プロファイル: 機能を切るとメニューから消える
     const prof = window.Master.current.profile;
     ok('見本の事業所は特養＋ショート', prof.kinds.join(',') === 'tokuyo,short' && prof.setupDone);
@@ -766,6 +767,90 @@
       try { await App.screens[name]((['resident', 'plan', 'form411', 'form42'].indexOf(name) >= 0) ? [y.id] : [], box); } catch (e) { err = e.message; }
       ok('画面「' + name + '」が描ける', !err && box.childNodes.length > 0, err);
     }
+
+    // ---- 複数のパソコンで使う（js/sync.js と js/db.js の合わせ目）----
+    {
+      const Sy = window.Sync;
+      const dump0 = await DB.exportAll(), n0 = (await DB.getAll('residents')).length;
+      await DB.put('dishes', { id: 'zz-sync', name: '試験用', items: [] });
+      const got = await DB.get('dishes', 'zz-sync');
+      ok('書いた記録に時刻と印が付く', typeof got._at === 'number' && got._at > 0 && !!got._by, [got._at, got._by]);
+      ok('印はこのパソコンのもの', got._by === DB.device());
+      await DB.del('dishes', 'zz-sync');
+      const tombs = await DB.tomb();
+      ok('消すと跡が残る', tombs.some((t) => t.store === 'dishes' && t.id === 'zz-sync'), tombs.length);
+
+      // 相手のパソコンが、消したはずの記録をまだ持っている場合
+      const mine = await DB.exportAll();
+      const theirs = Sy.pack({ dishes: mine.stores.dishes.concat([{ id: 'zz-sync', name: '試験用', _at: got._at, _by: 'pc-b' }]),
+        residents: mine.stores.residents }, [], 'pc-b');
+      const res1 = Sy.merge(mine, theirs);
+      ok('相手が持っていても、消した跡が勝つ', !res1.stores.dishes.some((d) => d.id === 'zz-sync'), res1.removed);
+
+      // 相手にしか無い記録は足される
+      const theirs2 = Sy.pack({ dishes: [{ id: 'zz-new', name: '相手の料理', _at: Date.now() + 1000, _by: 'pc-b' }] }, [], 'pc-b');
+      const res2 = Sy.merge(await DB.exportAll(), theirs2);
+      ok('相手にしか無い料理が足される', res2.stores.dishes.some((d) => d.id === 'zz-new') && res2.added === 1, res2.added);
+      ok('突き合わせてもこちらの利用者は消えない', res2.stores.residents.length === n0, res2.stores.residents.length);
+      await DB.applyMerge(res2);
+      ok('書き戻すと相手の料理が入っている', !!(await DB.get('dishes', 'zz-new')));
+      ok('書き戻しても利用者の数は変わらない', (await DB.getAll('residents')).length === n0);
+      await DB.del('dishes', 'zz-new');
+
+      // このパソコンだけの覚え書きは、書き出しに入らない
+      await DB.setLocal('probe', { a: 1 });
+      const dump2 = await DB.exportAll();
+      ok('このパソコンだけの覚え書きは書き出しに入らない', Object.keys(dump2.stores).indexOf('local') < 0 && JSON.stringify(dump2).indexOf('probe') < 0);
+      ok('覚え書きは読み戻せる', (await DB.getLocal('probe', null) || {}).a === 1);
+      await DB.delLocal('probe');
+
+      // 印の無い古いデータに、あとから印を付けられる
+      await DB.putRaw('dishes', [{ id: 'zz-old', name: '印の無い料理', items: [] }]);
+      const added = await DB.stampAll();
+      ok('印の無い記録に印を付けられる', added >= 1 && typeof (await DB.get('dishes', 'zz-old'))._at === 'number', added);
+      await DB.del('dishes', 'zz-old');
+      ok('書き出しの形は 2（突き合わせできる形）', (await DB.exportAll()).format === Sy.FORMAT);
+
+      // 本物のファイルで往復させる。file:// では使えない置き場所なので、その時は飛ばす
+      if (window.Share && navigator.storage && navigator.storage.getDirectory) {
+        let dir = null;
+        try { dir = await navigator.storage.getDirectory(); } catch (e) { dir = null; }
+        if (dir) {
+          const hd = await dir.getFileHandle('selftest_share.json', { create: true });
+          const w0 = await hd.createWritable(); await w0.write(''); await w0.close();
+          await window.Share.useHandle(hd, '自己テスト用');
+          const r1 = await window.Share.sync({ silent: true, noRefresh: true });
+          ok('共有ファイルへ書ける', r1.ok && r1.wrote, r1.why);
+          const wrote = JSON.parse(await (await hd.getFile()).text());
+          ok('共有ファイルに利用者が全員入っている', (wrote.stores.residents || []).length === n0, (wrote.stores.residents || []).length);
+
+          // このパソコンの利用者を全部消してから合わせる（＝別のパソコンで初めて開いた状態）
+          await DB.clear('residents');
+          const r2 = await window.Share.sync({ silent: true, noRefresh: true });
+          ok('共有ファイルから利用者が戻ってくる', r2.ok && (await DB.getAll('residents')).length === n0, (await DB.getAll('residents')).length);
+
+          // 1 人消して合わせると、共有ファイルからも消える（跡が伝わる）
+          const one = (await DB.getAll('residents'))[0];
+          await DB.del('residents', one.id);
+          await window.Share.sync({ silent: true, noRefresh: true });
+          const after = JSON.parse(await (await hd.getFile()).text());
+          ok('消した人は共有ファイルからも消える', !(after.stores.residents || []).some((x) => x.id === one.id), (after.stores.residents || []).length);
+          ok('消した跡が共有ファイルに入っている', (after.tomb || []).some((t) => t.store === 'residents' && t.id === one.id));
+
+          // もう一度合わせても、消した人はよみがえらない
+          await window.Share.sync({ silent: true, noRefresh: true });
+          ok('消した人はよみがえらない', !(await DB.getAll('residents')).some((x) => x.id === one.id));
+
+          await window.Share.detach();
+          try { await dir.removeEntry('selftest_share.json'); } catch (e) { /* 消せなくても次回は空にしてから使う */ }
+        }
+      }
+      // 元に戻す（このあとの試験が同じ土俵で動くように）
+      await DB.importAll(JSON.parse(JSON.stringify(dump0)));
+      await window.Master.load();
+      ok('片付けたあと利用者の数は元どおり', (await DB.getAll('residents')).length === n0, n0);
+    }
+
     // データが空でも全画面が描けるか（「該当なし」で null を返す作りの取りこぼしを見つける）
     for (const st of DB.STORES) await DB.clear(st);
     await window.Master.load();

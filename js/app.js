@@ -59,6 +59,10 @@
     if (/eiyo_kanri_demo/.test(window.DB.name)) bar.appendChild(h('div', { class: 'nav-note' }, '見本データで表示中（本番のデータとは別）'));
   }
 
+  // 画面が最初に出たあとに動かすもの（共有ファイルの突き合わせなど）。起動を待たせない
+  App.ready = [];
+  App.onReady = (fn) => App.ready.push(fn);
+
   App.start = function () {
     window.addEventListener('hashchange', () => render(false));
     const boot = async () => {
@@ -66,6 +70,7 @@
       await window.Master.load();
       if (App.beforeStart) await App.beforeStart();
       render(false);
+      App.ready.forEach((fn) => { try { fn(); } catch (e) { console.warn('onReady', e); } });
     };
     if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot); else boot();
   };

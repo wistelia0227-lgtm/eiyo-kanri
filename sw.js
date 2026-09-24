@@ -7,10 +7,10 @@
 //    GitHub Pages の max-age=600 のせいで「新しい画面＋古い JavaScript」の取り合わせになる（実際に起きた）
 //  - 大きくて変わらないもの（成分表 1MB、初期データ、LIFE の項目定義、アイコン）は「まずキャッシュ」。速さ優先。
 //    こちらは VERSION を上げた時に入れ替わる
-const VERSION = 'v0.26';
+const VERSION = 'v0.27';
 const FILES = [
   './', './index.html', './css/style.css',
-  './js/util.js', './js/model.js', './js/db.js', './js/profile.js',
+  './js/util.js', './js/model.js', './js/sync.js', './js/db.js', './js/profile.js',
   './js/foods_data.js', './js/nutri.js', './js/foodgroup.js', './js/amounts.js', './js/xlsx.js', './js/hygiene_forms.js', './js/bulk.js',
   './js/ncm.js', './js/life_spec.js', './js/life.js', './js/phrases.js',
   './js/dishes_seed.js', './js/master.js', './js/view.js', './js/app.js',
@@ -20,7 +20,7 @@ const FILES = [
   './modules/foods.js', './modules/dishes.js', './modules/menu.js',
   './modules/jisshi.js', './modules/stock.js', './modules/choice.js', './modules/poster.js', './modules/hygiene.js', './modules/bulkui.js', './modules/intake.js', './modules/needs.js', './modules/kondate.js', './modules/report.js', './modules/journal.js',
   './modules/seed.js', './modules/forms.js', './modules/measures.js', './modules/supplements.js',
-  './modules/links.js', './modules/settings.js', './modules/devtools.js',
+  './modules/links.js', './modules/share.js', './modules/settings.js', './modules/devtools.js',
   './manifest.webmanifest', './icons/icon-192.png', './icons/icon-512.png'
 ];
 const CACHE_FIRST = /(foods_data[.]js|foods_amino[.]js|foods_fat[.]js|foods_carb[.]js|dishes_seed[.]js|life_spec[.]js|icons[/])/;
