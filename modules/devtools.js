@@ -494,6 +494,29 @@
       const back = await DB.getMeta('minutes', []);
       ok('議事録が保存される', back.length === 1 && back[0].members.length === 2, back.length);
       await DB.setMeta('minutes', []);
+
+      // さし絵とひとこと
+      ok('月ごとの鍵は年月まで', Px.monthKey('2026-09-25') === 'poster_2026-09', Px.monthKey('2026-09-25'));
+      ok('同じ月ならどの日から見ても同じ鍵', Px.monthKey('2026-09-01') === Px.monthKey('2026-09-30'));
+      const mo0 = await Px.loadMonth(today);
+      ok('何も入れていない月は空', !mo0.title && !mo0.note && !mo0.foot && !mo0.pic, mo0);
+      await Px.saveMonth(today, { title: '９月の献立表', note: '秋の味覚を', foot: 'おたより', pic: null });
+      const mo1 = await Px.loadMonth(today);
+      ok('月ごとのひとことが保存される', mo1.title === '９月の献立表' && mo1.note === '秋の味覚を' && mo1.foot === 'おたより');
+      ok('あとから足した項目も空で補われる', 'pic' in mo1);
+      await DB.setMeta(Px.monthKey(today), null);
+
+      const prec = await window.Menu.get(today);
+      ok('行事を入れていない日は印が無い', !Px.hasDay(prec));
+      await Px.saveDay(prec, { name: '敬老の日 お祝い膳', mark: '🎉', pic: null });
+      const prec2 = await window.Menu.get(today);
+      ok('日ごとの行事が献立の記録に入る', Px.hasDay(prec2) && Px.dayOf(prec2).name === '敬老の日 お祝い膳', Px.dayOf(prec2));
+      ok('印も残る', Px.dayOf(prec2).mark === '🎉');
+      await Px.saveDay(prec2, { name: '', mark: '', pic: null });
+      ok('空にすると献立の記録から消える', !(await window.Menu.get(today)).poster);
+      ok('さし絵の大きさに上限がある', Px.PIC_MAX.month <= 600 && Px.PIC_MAX.day <= 200, Px.PIC_MAX);
+      ok('さし絵を選ぶ道具がある', typeof U.pickImage === 'function');
+      ok('印の見本がある', Px.MARKS.length >= 10, Px.MARKS.length);
     }
 
     // Excel の書き出し（画面側でも動くか）

@@ -7,7 +7,7 @@
 //    GitHub Pages の max-age=600 のせいで「新しい画面＋古い JavaScript」の取り合わせになる（実際に起きた）
 //  - 大きくて変わらないもの（成分表 1MB、初期データ、LIFE の項目定義、アイコン）は「まずキャッシュ」。速さ優先。
 //    こちらは VERSION を上げた時に入れ替わる
-const VERSION = 'v0.27';
+const VERSION = 'v0.28';
 const FILES = [
   './', './index.html', './css/style.css',
   './js/util.js', './js/model.js', './js/sync.js', './js/db.js', './js/profile.js',

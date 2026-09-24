@@ -1,4 +1,10 @@
 // 掲示用の献立表と、給食会議の議事録（削除可能）。
+// 掲示は利用者と家族が読む紙なので、表だけだと味気ない。市販ソフトにあるのと同じように
+// 「ひとこと」「おたより」「さし絵」「行事の印」を入れられるようにした（調査 05）。
+//   月ごとのもの（表題・ひとこと・おたより・さし絵）  … meta の poster_YYYY-MM
+//   日ごとのもの（行事の名前・印・さし絵）            … menus の日の記録の中（poster）
+// さし絵は小さくしてから data URL で持つ（js/util.js の U.pickImage）。
+// 共有ファイル（modules/share.js）にも乗るので、大きいまま持たない。
 // 掲示は決まりごと: 「献立表の掲示、熱量・たんぱく質・脂質・食塩等の主要栄養成分の表示」
 //   （特定給食施設における栄養管理に関する指導・支援等について 令和2年3月31日 健健発0331第2号 別添2 第2 の 7。調査 02 の 5.2）。
 //   厨房に渡す 予定献立表（modules/kondate.js）とは別物で、こちらは利用者と家族が読む紙。
@@ -11,6 +17,22 @@
   const ms = () => window.Master.current;
   const P = {};
   let span = 7, shokushu = '';
+
+  // ---- ひとこと・おたより・さし絵 ----
+  P.MARKS = ['🌸', '🎏', '🎋', '🎆', '🌾', '🎃', '🍁', '🎄', '🎍', '👹', '🎂', '🍱', '🍰', '🥢', '🎉'];
+  P.monthOf = (date) => String(date).slice(0, 7);
+  P.monthKey = (date) => 'poster_' + P.monthOf(date);
+  P.emptyMonth = () => ({ title: '', note: '', foot: '', pic: null });
+  P.loadMonth = async function (date) { return Object.assign(P.emptyMonth(), await DB.getMeta(P.monthKey(date), null)); };
+  P.saveMonth = function (date, v) { return DB.setMeta(P.monthKey(date), v); };
+  P.dayOf = (rec) => Object.assign({ name: '', mark: '', pic: null }, (rec && rec.poster) || {});
+  P.hasDay = (rec) => { const d = P.dayOf(rec); return !!(d.name || d.mark || d.pic); };
+  P.saveDay = async function (rec, v) {
+    if (!v.name && !v.mark && !v.pic) delete rec.poster; else rec.poster = v;
+    await DB.put('menus', rec);
+  };
+  // さし絵の大きさ。共有ファイルが重くならない所で止める
+  P.PIC_MAX = { month: 420, day: 150 };
 
   // 掲示に出す栄養素。通知が名指ししている 4 つを既定にする
   P.POSTER_KEYS = ['kcal', 'prot', 'fat', 'nacl'];
@@ -47,12 +69,16 @@
       '利用者と家族が読む紙です。決まりで「献立表の掲示」と「熱量・たんぱく質・脂質・食塩等の主要栄養成分の表示」が求められています。' +
       '厨房に渡す紙は「献立表」（調理指示書）のほうです。'));
 
-    // 見出し
+    // 見出し（月ごとのひとこと・さし絵）
     const fac = (m.facility && m.facility.name) || '';
+    const mo = await P.loadMonth(start);
     root.appendChild(h('div', { class: 'poster-head' },
-      h('h1', null, '献　立　表'),
+      mo.pic ? h('img', { class: 'poster-pic', src: mo.pic.url, alt: '' }) : null,
+      h('h1', null, mo.title || '献　立　表'),
       h('div', { class: 'sub' }, U.fmtDate(days[0], true) + ' 〜 ' + U.fmtDate(days[days.length - 1], true) +
-        '　' + M.label(m.shokushu, sId) + (fac ? '　' + fac : ''))));
+        '　' + M.label(m.shokushu, sId) + (fac ? '　' + fac : '')),
+      mo.note ? h('div', { class: 'poster-note' }, mo.note) : null));
+    root.appendChild(editMonth(start, mo));
 
     let any = false;
     const body = days.map((d) => {
@@ -60,8 +86,12 @@
       if (!has) return null;
       any = true;
       const sum = Menu.sumDay(recs[d], meals, sId, dishMap);
+      const pd = P.dayOf(recs[d]);
       return h('tr', { class: [0, 6].indexOf(M.weekday(d)) >= 0 ? 'weekend' : '' },
-        h('th', null, U.fmtDate(d, true)),
+        h('th', null, U.fmtDate(d, true),
+          pd.pic ? h('img', { class: 'poster-daypic', src: pd.pic.url, alt: '' }) : null,
+          (pd.mark || pd.name) ? h('div', { class: 'poster-event' }, pd.mark ? pd.mark + ' ' : '', pd.name) : null,
+          h('button', { class: 'btn small no-print', onclick: () => editDay(d, recs[d]) }, P.hasDay(recs[d]) ? '行事を直す' : '行事')),
         meals.map((ml) => h('td', null, Menu.cellDishes(recs[d], ml.id, sId).map((c) =>
           h('div', null, (dishMap[c.dishId] || { name: c.name }).name)))),
         keys.map((k) => h('td', { class: 'num' }, N.fmt(k, sum.values[k]))));
@@ -76,10 +106,71 @@
         [h('th', null, '日')].concat(meals.map((ml) => h('th', null, ml.label)))
           .concat(keys.map((k) => h('th', null, Foods.nutrient(k).name, h('div', { class: 'sub' }, Foods.nutrient(k).unit)))))),
       h('tbody', null, body))));
+    if (mo.foot) root.appendChild(h('div', { class: 'poster-foot' }, mo.foot));
     root.appendChild(h('div', { class: 'sub' }, '栄養価は ' + M.label(m.shokushu, sId) + ' の 1 日分です。' +
       '主食の量や食事の形態によって、実際に召し上がる量は人ごとに変わります。'));
     root.appendChild(h('div', { class: 'sub' }, '成分値の出どころ: ' + (N.meta ? N.meta.citation : '日本食品標準成分表')));
   });
+
+  // 月ごとの文とさし絵を直す（画面の中で直せる。印刷には出ない）
+  function editMonth(start, mo) {
+    const box = h('div', { class: 'card no-print' });
+    const save = async () => { await P.saveMonth(start, mo); App.refresh(); };
+    const title = h('input', { class: 'input', value: mo.title, placeholder: '献　立　表',
+      onchange: (e) => { mo.title = e.target.value; save(); } });
+    const note = h('input', { class: 'input', value: mo.note, placeholder: '例: 今月は旬のさんまを使います',
+      onchange: (e) => { mo.note = e.target.value; save(); } });
+    const foot = h('textarea', { class: 'input', rows: 3, placeholder: '例: ご家族の差し入れは、事前に栄養士までご相談ください。',
+      onchange: (e) => { mo.foot = e.target.value; save(); } });
+    foot.value = mo.foot;
+    box.appendChild(h('div', { class: 'sub' }, P.monthOf(start) + ' の掲示に付けるものです（同じ月ならどの週から見ても同じ）。'));
+    box.appendChild(h('div', { class: 'grid2' }, U.field('表題', title), U.field('見出しのひとこと', note)));
+    box.appendChild(U.field('下のおたより', foot));
+    box.appendChild(picRow('見出しのさし絵', mo.pic, P.PIC_MAX.month, async (pic) => { mo.pic = pic; await save(); }));
+    return box;
+  }
+
+  // さし絵を 1 つ選ぶ/消す 行
+  function picRow(label, pic, maxPx, set) {
+    const row = h('div', { class: 'toolrow' }, h('span', { class: 'sub' }, label));
+    if (pic) {
+      row.appendChild(h('img', { class: 'poster-thumb', src: pic.url, alt: '' }));
+      row.appendChild(h('span', { class: 'sub' }, pic.w + '×' + pic.h + '　' + Math.round(pic.bytes / 1024) + 'KB'));
+    }
+    row.appendChild(h('button', { class: 'btn', onclick: async () => {
+      const got = await U.pickImage(maxPx);
+      if (!got) return;
+      await set(got);
+    } }, pic ? '選び直す' : '絵を選ぶ'));
+    if (pic) row.appendChild(h('button', { class: 'btn danger-outline', onclick: () => set(null) }, '消す'));
+    return row;
+  }
+
+  // 日ごとの行事（名前・印・さし絵）
+  function editDay(date, rec) {
+    const v = P.dayOf(rec);
+    let close;
+    const body = h('div');
+    const draw = () => {
+      body.innerHTML = '';
+      const name = h('input', { class: 'input', value: v.name, placeholder: '例: 敬老の日 お祝い膳',
+        onchange: (e) => { v.name = e.target.value; } });
+      const marks = h('div', { class: 'chips' }, [''].concat(P.MARKS).map((mk) =>
+        h('button', { class: 'btn seg' + (v.mark === mk ? ' on' : ''), onclick: () => { v.mark = mk; draw(); } }, mk || 'なし')));
+      body.appendChild(U.field('行事の名前', name));
+      body.appendChild(h('div', { class: 'sub' }, '印'));
+      body.appendChild(marks);
+      body.appendChild(picRow('その日のさし絵', v.pic, P.PIC_MAX.day, (pic) => { v.pic = pic; draw(); }));
+    };
+    draw();
+    close = U.modal(h('div', null,
+      h('h2', null, U.fmtDate(date, true) + ' の行事'),
+      h('div', { class: 'sub' }, '掲示の日付のところに出ます。厨房に渡す献立表には出ません。'),
+      body,
+      h('div', { class: 'modal-btns' },
+        h('button', { class: 'btn', onclick: () => close() }, 'やめる'),
+        h('button', { class: 'btn primary', onclick: async () => { await P.saveDay(rec, v); close(); App.refresh(); } }, '保存'))));
+  }
 
   // 設定: 掲示に出す栄養素
   App.registerSettings({ order: 36, title: '掲示用の献立表に出す栄養素', render: function () {

@@ -216,6 +216,39 @@
       input.click();
     });
   };
+  // さし絵を選ぶ。選んだ絵は小さくしてから data URL にする。
+  //   データは共有ファイル（modules/share.js）にも乗るので、大きいまま持たない。
+  //   透明のある絵（PNG など）は PNG のまま、写真は JPEG にする（透明を失わないため）。
+  U.pickImage = function (maxPx, quality) {
+    return new Promise((resolve) => {
+      const input = h('input', { type: 'file', accept: 'image/*', style: 'display:none' });
+      document.body.appendChild(input);
+      input.addEventListener('cancel', () => { input.remove(); resolve(null); });
+      input.addEventListener('change', () => {
+        const f = input.files[0];
+        input.remove();
+        if (!f) return resolve(null);
+        const url = URL.createObjectURL(f);
+        const img = new Image();
+        img.onload = function () {
+          const k = Math.min(1, (maxPx || 320) / Math.max(img.width, img.height));
+          const w = Math.max(1, Math.round(img.width * k)), hh = Math.max(1, Math.round(img.height * k));
+          const cv = document.createElement('canvas');
+          cv.width = w; cv.height = hh;
+          cv.getContext('2d').drawImage(img, 0, 0, w, hh);
+          URL.revokeObjectURL(url);
+          const keepAlpha = /png|gif|webp|svg/.test(f.type || '');
+          let out = '';
+          try { out = keepAlpha ? cv.toDataURL('image/png') : cv.toDataURL('image/jpeg', quality || 0.82); } catch (e) { out = ''; }
+          resolve(out ? { url: out, w: w, h: hh, bytes: Math.round(out.length * 0.75) } : null);
+        };
+        img.onerror = function () { URL.revokeObjectURL(url); resolve(null); };
+        img.src = url;
+      });
+      input.click();
+    });
+  };
+
   // 表を CSV で（Excel で開ける BOM つき）
   U.csv = function (rows) {
     return '﻿' + rows.map((r) => r.map((c) => { c = c == null ? '' : String(c); return /[",\n]/.test(c) ? '"' + c.replace(/"/g, '""') + '"' : c; }).join(',')).join('\r\n');
