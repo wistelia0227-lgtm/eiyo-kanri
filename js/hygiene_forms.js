@@ -66,11 +66,11 @@
         { t: '保管設備内での原材料の相互汚染が防がれていますか。', sub: true },
         { t: '原材料を配送用包装のまま非汚染作業区域に持ち込んでいませんか。' }
       ] },
-      { id: 'month', label: '② 原材料の取扱い（月１回点検）', items: [
+      { id: 'month', label: '② 原材料の取扱い（月１回点検）', nonum: true, items: [
         { t: '原材料について納入業者が定期的に実施する検査結果の提出が最近１か月以内にありましたか。' },
         { t: '検査結果は１年間保管されていますか。', sub: true }
       ] },
-      { id: 'kenshoku', label: '③ 検食の保存', items: [
+      { id: 'kenshoku', label: '③ 検食の保存', nonum: true, items: [
         { t: '検食は、原材料（購入した状態のもの）及び調理済み食品を食品ごとに５０ｇ程度ずつ清潔な容器に密封して入れ、－２０℃以下で２週間以上保存されていますか。' }
       ] }
     ] },
@@ -123,7 +123,7 @@
   F.WATER_COLS = [
     { id: 'place', label: '採取場所' }, { id: 'when', label: '採取時期' },
     { id: 'color', label: '色' }, { id: 'turbid', label: '濁り' }, { id: 'smell', label: '臭い' }, { id: 'foreign', label: '異物' },
-    { id: 'cl', label: '残留塩素濃度 (mg/ℓ)' }
+    { id: 'cl', label: '残留塩素濃度', unit: 'mg／ℓ' }
   ];
 
   // 記録簿（点検表ではなく、数字と時刻を書く表）

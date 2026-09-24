@@ -216,6 +216,31 @@
       input.click();
     });
   };
+  // 紙の様式に寄せた台紙。通知や手引きの様式は、たいてい
+  //   左上に表題／右上に日付／その下に〈責任者・衛生管理者〉の印欄／下に自由記入の枠
+  // という同じ形をしている。その形を 1 か所で作る。
+  //   opts: { date: '2026-09-25', stamps: ['責任者','衛生管理者'], note: '（別紙）' }
+  U.paper = function (title, opts) {
+    opts = opts || {};
+    const head = h('div', { class: 'paper-head' },
+      h('div', { class: 'paper-title' }, opts.note ? h('div', { class: 'paper-note-label' }, opts.note) : null, h('h1', null, title)),
+      h('div', { class: 'paper-right' },
+        opts.date ? h('div', { class: 'paper-date' }, U.fmtDate(opts.date, true)) : null,
+        (opts.stamps && opts.stamps.length) ? h('table', { class: 'stamps' },
+          h('thead', null, h('tr', null, opts.stamps.map((t) => h('th', null, t)))),
+          h('tbody', null, h('tr', null, opts.stamps.map((t, i) => h('td', { class: 'stamp-cell', 'data-i': String(i) }, ''))))) : null));
+    const sheet = h('div', { class: 'paper' }, head);
+    sheet.head = head;
+    return sheet;
+  };
+  // 様式の下にある自由記入の枠（〈改善を行った点〉など。見出しは枠の中の左上）
+  U.paperBox = function (label, value, onchange, rows) {
+    const el = h('textarea', { class: 'paper-free', rows: String(rows || 3) });
+    el.value = value || '';
+    if (onchange) el.addEventListener('change', () => onchange(el.value));
+    return h('div', { class: 'paper-boxed' }, h('div', { class: 'paper-box-label' }, label), el);
+  };
+
   // さし絵を選ぶ。選んだ絵は小さくしてから data URL にする。
   //   データは共有ファイル（modules/share.js）にも乗るので、大きいまま持たない。
   //   透明のある絵（PNG など）は PNG のまま、写真は JPEG にする（透明を失わないため）。

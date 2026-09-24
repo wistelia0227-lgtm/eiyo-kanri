@@ -53,7 +53,8 @@
     if (params[0] === 'kenshu' || params[0] === 'ledger' || params[0] === 'count') tab = params[0];
     const date = params[1] || U.today();
     const rows = await S.all();
-    root.appendChild(h('header', { class: 'topbar' }, h('h1', null, '検収・在庫'),
+    // 検収の記録簿は紙の様式（表題は台紙が持つ）なので、画面の見出しは刷らない
+    root.appendChild(h('header', { class: 'topbar' + (tab === 'kenshu' ? ' no-print' : '') }, h('h1', null, '検収・在庫'),
       h('div', { class: 'no-print' }, h('button', { class: 'btn', onclick: () => window.print() }, '印刷'), ' ',
         h('a', { class: 'btn', href: '#/order/' + date }, '発注書'))));
     root.appendChild(h('div', { class: 'toolrow no-print' },
@@ -71,9 +72,24 @@
     root.appendChild(h('div', { class: 'card info no-print' },
       '納品に立ち会って、その場で付ける表です（大量調理施設衛生管理マニュアル 様式4）。' +
       '「発注から写す」を押すと、その日に頼んだ物が並びます。'));
-    if (!today.length) root.appendChild(h('div', { class: 'empty' }, 'この日の検収はまだありません。'));
-    else root.appendChild(h('div', { class: 'scroll-x' }, h('table', { class: 'list bordered small' },
-      h('thead', null, h('tr', null, ['時刻', '納入業者', '品目', '生産地', '期限表示', '数量', '鮮度', '包装', '品温', '異物', '進言事項', ''].map((t) => h('th', null, t)))),
+
+    // 刷った時の形は原本のとおり（左上に表題／右上に日付と印欄／下に〈進言事項〉の枠）
+    const daily = (await DB.get('daily', date)) || { date: date, extra: {} };
+    const paper = U.paper('検収の記録簿', { date: date, stamps: ['責任者', '衛生管理者'], note: '（別紙）' });
+    const stampKeys = ['kenshuBy', 'kenshuKanri'];
+    paper.querySelectorAll('.stamp-cell').forEach((td, i) => {
+      const el = h('input', { class: 'input no-print-border', type: 'text', value: daily[stampKeys[i]] || '' });
+      el.addEventListener('change', async () => { daily[stampKeys[i]] = el.value.trim(); await DB.put('daily', daily); });
+      td.appendChild(el);
+    });
+    root.appendChild(paper);
+    root = paper;
+
+    if (!today.length) root.appendChild(h('div', { class: 'empty no-print' }, 'この日の検収はまだありません。'));
+    root.appendChild(h('div', { class: 'scroll-x' }, h('table', { class: 'list bordered small kenshu' },
+      h('thead', null, h('tr', null,
+        ['納品の時刻', '納入業者名', '品目名', '生産地', '期限表示', '数量', '鮮度', '包装', '品温', '異物'].map((t) => h('th', null, t))
+          .concat([h('th', { class: 'no-print' }, '進言事項'), h('th', { class: 'no-print' }, '')]))),
       h('tbody', null, today.sort((a, b) => ((a.check && a.check.time) || '').localeCompare((b.check && b.check.time) || '')).map((r) => {
         r.check = r.check || {};
         const inp = (f) => {
@@ -99,12 +115,12 @@
           h('td', null, inp(byId.origin)), h('td', null, inp(byId.expiry)),
           h('td', null, qty, h('span', { class: 'sub' }, ' g')),
           h('td', null, inp(byId.fresh)), h('td', null, inp(byId.pack)), h('td', null, inp(byId.temp)), h('td', null, inp(byId.foreign)),
-          h('td', null, inp(byId.advice)),
+          h('td', { class: 'no-print' }, inp(byId.advice)),
           h('td', { class: 'no-print' }, h('button', { class: 'btn small', onclick: async () => {
             if (!await U.confirm('この行を消します。', { okLabel: '消す', danger: true })) return;
             await DB.del('stock', r.id); App.refresh();
           } }, '消す')));
-      })))));
+      }).concat(fillRows(Math.max(0, 11 - today.length), 10))))));
     const vendors = [];
     rows.forEach((r) => { if (r.vendor && vendors.indexOf(r.vendor) < 0) vendors.push(r.vendor); });
     (ms().prices || []).forEach((p) => { if (p.vendor && vendors.indexOf(p.vendor) < 0) vendors.push(p.vendor); });
@@ -119,8 +135,23 @@
           vendor: (pr && pr.vendor) || '', memo: '', at: Date.now(), check: {} });
         App.refresh();
       } }, '＋ 1 品足す')));
-    root.appendChild(h('table', { class: 'stamps print-only' }, h('tbody', null,
-      h('tr', null, ['検収者', '責任者'].map((s) => h('th', null, s))), h('tr', null, [0, 1].map(() => h('td', null, ' '))))));
+    // 〈進言事項〉。原本は表の下の 1 つの枠。行ごとに書いたものも、この枠に並べて刷る
+    const said = today.filter((r) => r.check && r.check.advice)
+      .map((r) => Foods.shortName(r.name || r.no) + '：' + r.check.advice);
+    const box = U.paperBox('〈進言事項〉', daily.kenshuAdvice, async (v) => { daily.kenshuAdvice = v; await DB.put('daily', daily); }, 4);
+    if (said.length) box.appendChild(h('div', { class: 'advice-lines' }, said.map((t) => h('div', null, t))));
+    root.appendChild(box);
+    if (said.length) root.appendChild(h('div', { class: 'sub no-print' }, '行に書いた進言事項（' + said.length + ' 件）も、この枠に並べて刷られます。'));
+  }
+
+  // 紙に刷った時だけ出る空の行（手書きで足せるように）
+  function fillRows(n, cols) {
+    const out = [];
+    for (let i = 0; i < n; i++) {
+      out.push(h('tr', { class: 'fill' }, Array.from({ length: cols }, () => h('td', null, ' '))
+        .concat([h('td', { class: 'no-print' }, ''), h('td', { class: 'no-print' }, '')])));
+    }
+    return out;
   }
 
   // その日の発注から検収の行を作る

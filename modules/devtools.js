@@ -471,8 +471,74 @@
       ok('点検の結果が保存される', rec2.items[HF.itemId('daily', 0)] === '○' && rec2.items[HF.itemId('daily', 1)] === '×', rec2.items);
       ok('× が改善の要る所として拾える', HF.bad(HF.form('shisetsu'), rec2).length === 1, HF.bad(HF.form('shisetsu'), rec2));
       ok('食数の手入力（extra）と同居できる', back.extra !== undefined);
+
+      // 刷った時の形が紙の様式どおりか（左上に表題／右上に日付と印欄／下に改善の枠）
+      const sheet = U.paper('試しの様式', { date: today, stamps: ['責任者', '衛生管理者'], note: '（別紙）' });
+      ok('台紙に表題が入る', sheet.querySelector('.paper-title h1').textContent === '試しの様式');
+      ok('台紙の右上に日付が入る', sheet.querySelector('.paper-date').textContent === U.fmtDate(today, true));
+      ok('台紙の印欄は 責任者・衛生管理者', [...sheet.querySelectorAll('.stamps th')].map((x) => x.textContent).join() === '責任者,衛生管理者');
+      ok('印欄は書き込める空欄になっている', sheet.querySelectorAll('.stamp-cell').length === 2);
+
+      const box = h('div');
+      await App.screens.hygiene(['jujisha', today], box);
+      ok('点検表は台紙 1 枚で刷れる', box.querySelectorAll('.paper').length === 1, box.querySelectorAll('.paper').length);
+      ok('下に〈改善を行った点〉〈計画的に改善すべき点〉の枠がある', box.querySelectorAll('.paper-boxed').length === 2,
+        [...box.querySelectorAll('.paper-box-label')].map((x) => x.textContent));
+      ok('画面の見出しは刷らない（台紙が表題を持つので二重になる）', box.querySelector('header.topbar').className.indexOf('no-print') >= 0);
+      ok('名前を入れていなくても人の表が 5 行出る', box.querySelectorAll('table.staff tbody tr').length === 5,
+        box.querySelectorAll('table.staff tbody tr').length);
+      ok('付けた印は紙にも出る（ボタンとは別に文字で持つ）', box.querySelectorAll('.mark-cell .print-only').length > 0);
+
+      const daily3 = await HYx.get(today);
+      const rec3 = HYx.recOf(daily3, 'shisetsu');
+      rec3.items[HF.itemId('daily', 2)] = '○';
+      await DB.put('daily', daily3);
+      const box2 = h('div');
+      await App.screens.hygiene(['shisetsu', today], box2);
+      // この様式には、上で 1 番目に ○、2 番目に ×、いま 3 番目に ○ を付けてある
+      const marks = [...box2.querySelectorAll('.mark-cell .print-only')].map((x) => x.textContent).filter(Boolean);
+      ok('紙に出るのは付けた印だけ', marks.join() === '○,×,○', marks);
+      ok('節が 2 つ以上ある様式は節の見出しが出る', box2.querySelectorAll('.paper-sec').length === 3,
+        [...box2.querySelectorAll('.paper-sec')].map((x) => x.textContent));
+
+      const box3 = h('div');
+      await App.screens.hygiene(['hokan', today], box3);
+      ok('記録簿は空でも書く行が出る（刷って手書きできる）',
+        [...box3.querySelectorAll('table.list tbody')].every((tb) => tb.children.length >= 3),
+        [...box3.querySelectorAll('table.list tbody')].map((tb) => tb.children.length));
+      ok('記録簿にも改善の枠がある', box3.querySelectorAll('.paper-boxed').length >= 1);
+
+      // 原本で番号の無い節（原材料の ②③）は番号を出さない
+      const box4 = h('div');
+      await App.screens.hygiene(['genzairyo', today], box4);
+      const nums = [...box4.querySelectorAll('table.check tbody th.num')].map((x) => x.textContent);
+      // ① は 8 行（1 と 3 と 4 に続きの行がある）で 1〜5、② の 2 行と ③ の 1 行は番号なし
+      ok('①は 1〜5 の番号が付く', nums.slice(0, 8).join() === '1,,2,3,,4,,5', nums.slice(0, 8));
+      ok('②③は原本どおり番号を出さない', nums.length === 11 && nums.slice(8).every((x) => x === ''), nums.slice(8));
+
+      // 使用水の表は原本どおり 4 行・単位つき
+      const box5 = h('div');
+      await App.screens.hygiene(['kigu', today], box5);
+      ok('使用水の表は 4 行', (function () {
+        const tbs = [...box5.querySelectorAll('table.list tbody')];
+        return tbs.some((tb) => tb.children.length === 4);
+      })());
+      ok('残留塩素濃度の単位は欄の中', box5.textContent.indexOf('mg／ℓ') >= 0);
+
+      // 検収の記録簿（様式4）も同じ台紙
+      const box6 = h('div');
+      await App.screens.stock(['kenshu', today], box6);
+      ok('検収の記録簿も台紙 1 枚', box6.querySelectorAll('.paper').length === 1);
+      ok('検収の下に〈進言事項〉の枠がある', [...box6.querySelectorAll('.paper-box-label')].map((x) => x.textContent).join() === '〈進言事項〉');
+      ok('検収は空でも 11 行、紙に刷って手書きできる', box6.querySelectorAll('tr.fill').length + box6.querySelectorAll('table.kenshu tbody tr:not(.fill)').length === 11,
+        [box6.querySelectorAll('tr.fill').length, box6.querySelectorAll('table.kenshu tbody tr:not(.fill)').length]);
+      ok('検収の列は原本どおり 10 列（進言事項は下の枠）',
+        [...box6.querySelectorAll('table.kenshu thead th')].filter((x) => x.className.indexOf('no-print') < 0).length === 10,
+        [...box6.querySelectorAll('table.kenshu thead th')].map((x) => x.textContent));
+
       // 片付け
-      delete back.hygiene; await DB.put('daily', back);
+      const back2 = await HYx.get(today);
+      delete back2.hygiene; await DB.put('daily', back2);
     }
 
     // 掲示用の献立表と給食会議の議事録

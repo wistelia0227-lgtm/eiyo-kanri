@@ -246,5 +246,38 @@ img.poster-daypic { display: block; max-width: 74px; max-height: 56px; margin: .
 }
 
 /* 衛生管理の点検表（modules/hygiene.js） */
+/* 紙の様式に寄せた台紙（U.paper / U.paperBox。衛生の点検表・記録簿などで使う） */
+.paper { background: #fff; border: 1px solid var(--line); border-radius: 8px; padding: 1rem 1.2rem; margin: .6rem 0; }
+.paper-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem; margin-bottom: .6rem; }
+.paper-title h1 { font-size: 1.15rem; margin: 0; }
+.paper-note-label { font-size: .85rem; color: var(--sub); }
+.paper-right { text-align: right; }
+.paper-date { margin-bottom: .2rem; font-size: .95rem; }
+.paper-right table.stamps { margin: 0 0 0 auto; }
+.paper-sec { margin: .8rem 0 .2rem; font-weight: 600; }
+.paper table.list { margin: 0; }
+.paper table.list th, .paper table.list td { border: 1px solid #6b7280; }
+.paper-boxed { border: 1px solid #6b7280; margin-top: .6rem; padding: .3rem .5rem; }
+.paper-box-label { font-size: .9rem; }
+textarea.paper-free { width: 100%; border: 0; padding: .2rem 0; background: transparent; resize: vertical; font: inherit; }
+textarea.paper-free:focus { outline: 1px dashed var(--line); }
+.mark-cell { text-align: center; width: 5.5em; }
+tr.fill { display: none; }            /* 手書き用の空行。紙にだけ出す */
+.advice-lines { margin-top: .3rem; }
+table.kenshu th, table.kenshu td { white-space: nowrap; }
+/* 様式2 の人ごとの表。原本は「体調」「化膿創」などを縦書きで細い列にしている */
+table.staff th .vert { writing-mode: vertical-rl; text-orientation: upright; letter-spacing: .05em; }
+table.staff thead th { vertical-align: bottom; }
+table.staff td { text-align: center; }
+table.staff .blankrow { display: inline-block; min-height: 1.4em; }
+.mark-cell .print-only { font-size: 1.1rem; }
+@media print {
+  .paper { border: 0; border-radius: 0; padding: 0; margin: 0; page-break-after: always; break-after: page; }
+  .paper:last-child { page-break-after: auto; break-after: auto; }
+  .paper .segrow { display: none; }
+  .mark-cell .print-only { display: block; }
+  textarea.paper-free { min-height: 14mm; }
+  tr.fill { display: table-row; } tr.fill td { height: 7mm; }
+}
 table.check th.num { width: 2em; text-align: center; }
 table.check td:nth-child(2) { line-height: 1.45; }
