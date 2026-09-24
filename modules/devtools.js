@@ -398,6 +398,45 @@
       m2.prices = [];
     }
 
+    // まとめて取り込み
+    {
+      const Bx = window.Bulk;
+      const TAB = String.fromCharCode(9);
+      const txt = [
+        ['料理名', '区分', '何人分', '食品番号', '食品名', '重量'].join(TAB),
+        ['試しの煮物', '副菜', '1', '02017', '', '60'].join(TAB),
+        ['試しの煮物', '', '', '', 'こいくちしょうゆ', '6'].join(TAB)
+      ].join(String.fromCharCode(10));
+      const parsed = Bx.parse(txt);
+      ok('貼り付けた表が読める', !parsed.error && parsed.rows.length === 2, parsed.error);
+      const list = Bx.toDishes(parsed.rows, window.Nutri);
+      ok('料理 1 件・材料 2 行にまとまる', list.length === 1 && list[0].items.length === 2, list.length);
+      ok('そのまま入れられる', list[0].ok);
+      // 取り込んでみる
+      const before = (await window.Dishes.all()).length;
+      await DB.putMany('dishes', [{ id: U.uid('d'), name: list[0].name, kana: '', kind: list[0].kind, main: '', method: '',
+        servings: 1, items: list[0].items.map((i) => ({ no: i.no, name: i.name, g: i.g })), allergy: [], memo: '', updatedAt: Date.now() }]);
+      const after = await window.Dishes.all();
+      ok('料理が 1 件増える', after.length === before + 1, [before, after.length]);
+      const got = after.find((d) => d.name === '試しの煮物');
+      const sum = window.Dishes.sumOf(got);
+      ok('取り込んだ料理の栄養価が出る', sum.values.kcal > 0 && sum.values.nacl > 0, [sum.values.kcal, sum.values.nacl]);
+      // 書き出して読み戻す
+      const rows = Bx.toRows([got]);
+      const back = Bx.toDishes(Bx.parse(rows.map((r) => r.join(TAB)).join(String.fromCharCode(10))).rows, window.Nutri);
+      ok('書き出して読み戻すと同じ食品番号', back[0].items.map((i) => i.no).join() === got.items.map((i) => i.no).join(),
+        [back[0].items.map((i) => i.no), got.items.map((i) => i.no)]);
+      await DB.del('dishes', got.id);
+      // 献立の取り込み
+      const mtxt = ['日付,食事,食種,料理名,人数分', today + ',昼,常食,ごはん,1'].join(String.fromCharCode(10));
+      const mp = Bx.parseMenu(mtxt);
+      ok('献立の表が読める', !mp.error && mp.rows.length === 1, mp.error);
+      ok('日付・食事・食種が ID に直る',
+        Bx.toDate(mp.rows[0].date) === today && Bx.toId(M.activeMeals(m2), mp.rows[0].meal) === 'l'
+        && Bx.toId(m2.shokushu, mp.rows[0].shokushu) === 'jo',
+        [Bx.toDate(mp.rows[0].date), Bx.toId(M.activeMeals(m2), mp.rows[0].meal), Bx.toId(m2.shokushu, mp.rows[0].shokushu)]);
+    }
+
     // 衛生管理の点検表
     {
       const HF = window.HygieneForms, HYx = window.Hygiene;
@@ -515,6 +554,15 @@
       ok('棚卸しの後の出庫は実数から引く（2400 − 400 = 2000）',
         Sx.balance(await Sx.all())['01083'].qty === 2000, Sx.balance(await Sx.all())['01083'].qty);
       ok('入庫と出庫の向きが分かる', Sx.sign('in') === 1 && Sx.sign('out') === -1);
+      // 同じ日・同じミリ秒でも順が決まる（棚卸しは必ず最後）
+      ok('同じ日は 入庫 → 出庫 → 棚卸し の順', Sx.RANK.in < Sx.RANK.out && Sx.RANK.out < Sx.RANK.adjust, Sx.RANK);
+      ok('棚卸しと出庫を同じ日・同じ時刻に入れても実数が残る', (function () {
+        const t = Date.now();
+        const rows2 = [{ id: 'a', date: d1, no: 'x', kind: 'in', qty: 1000, at: t },
+          { id: 'b', date: d1, no: 'x', kind: 'adjust', qty: 800, at: t },
+          { id: 'c', date: d1, no: 'x', kind: 'out', qty: 100, at: t }];
+        return Sx.balance(rows2)['x'].qty === 800;
+      })());
       await DB.clear('stock');
       ok('出入りを消せば残も消える', Object.keys(Sx.balance(await Sx.all())).length === 0);
     }

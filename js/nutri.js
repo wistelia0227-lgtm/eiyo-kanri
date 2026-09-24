@@ -46,6 +46,13 @@
     return food.flags ? (food.flags[i] || '.') : '.';
   };
 
+  // 一覧や取り込みに出す短い食品名。分類の括り（＜魚類＞ ［水稲めし］ （さけ・ます類））を落とす
+  N.shortName = function (name) {
+    const parts = String(name || '').replace(/　/g, ' ').split(/\s+/).filter(Boolean)
+      .filter((w) => !/^[＜(（[［].*[＞)）\]］]$/.test(w));
+    return parts.join(' ') || String(name || '');
+  };
+
   // 検索: 空白区切りの語をすべて含むもの。ひらがな・カタカナ・全角半角の違いを吸収する
   function norm(s) {
     return String(s || '').replace(/[ぁ-ゖ]/g, (c) => String.fromCharCode(c.charCodeAt(0) + 0x60))

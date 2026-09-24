@@ -29,10 +29,15 @@
   S.put = (rec) => DB.put('stock', rec);
   S.sign = (kind) => kind === 'out' ? -1 : 1;
 
-  // 食品ごとの残（date まで）。adjust は「その日の実数」として、それ以前を上書きする
+  // 食品ごとの残（date まで）。adjust（棚卸し）は「その日の実数」として、それ以前を上書きする。
+  // 同じ日の中は 入庫 → 出庫 → 棚卸し の順で見る。棚卸しはその日に数えた実数なので必ず最後。
+  // （日付と記録時刻だけで並べると、同じミリ秒に入れた記録の順が決まらず、棚卸しが出庫に上書きされることがあった）
+  S.RANK = { in: 0, out: 1, adjust: 2 };
   S.balance = function (rows, upto) {
     const by = {};
-    rows.slice().sort((a, b) => a.date.localeCompare(b.date) || (a.at || 0) - (b.at || 0)).forEach((r) => {
+    rows.slice().sort((a, b) => a.date.localeCompare(b.date)
+      || (S.RANK[a.kind] || 0) - (S.RANK[b.kind] || 0)
+      || (a.at || 0) - (b.at || 0)).forEach((r) => {
       if (upto && r.date > upto) return;
       const e = by[r.no] = by[r.no] || { no: r.no, name: r.name, qty: 0, last: '' };
       if (r.kind === 'adjust') e.qty = Number(r.qty) || 0;

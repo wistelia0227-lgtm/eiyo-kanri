@@ -19,12 +19,8 @@
   };
   F.nutrient = (key) => N.nutrients[N.key[key]] || { key: key, name: key, unit: '' };
 
-  // 一覧に出す短い食品名。分類の括り（＜魚類＞ ［水稲めし］ （さけ・ます類））を落とす
-  F.shortName = function (name) {
-    const parts = String(name || '').replace(/　/g, ' ').split(/\s+/).filter(Boolean)
-      .filter((w) => !/^[＜(（[［].*[＞)）\]］]$/.test(w));
-    return parts.join(' ') || String(name || '');
-  };
+  // 一覧に出す短い食品名（分類の括りを落とす）。実体は js/nutri.js
+  F.shortName = (name) => N.shortName(name);
 
   // 成分の値を 1 つ表示（未測定・微量・推定を記号で示す）
   F.cell = function (food, key) {
