@@ -585,6 +585,76 @@
       ok('印の見本がある', Px.MARKS.length >= 10, Px.MARKS.length);
     }
 
+    // 保健所に出す報告書（福岡県 様式第5号 / 熊本県 別記第6号様式その1）
+    {
+      const HKf = window.HoukokuForms, Hx = window.Houkoku;
+      const per = window.Report.monthNow();
+      const F5 = HKf.form('fukuoka5'), K6 = HKf.form('kumamoto6');
+      const d = await Hx.collect(per, '');
+      ok('その月の献立の日数を数えている', d.filled > 0, d.filled);
+      ok('1 日あたりの食数を出している', d.meals.l > 0, d.meals);
+      ok('食種別の食数を出している', d.shokushu.length > 0 && d.shokushu[0].n > 0, d.shokushu);
+      ok('食種別の合計が 朝＋昼＋夕 と合う',
+        d.shokushu.reduce((a2, x) => a2 + x.n, 0) === (d.meals.b || 0) + (d.meals.l || 0) + (d.meals.d || 0),
+        [d.shokushu.reduce((a2, x) => a2 + x.n, 0), d.meals]);
+
+      const fa = Hx.mapFukuoka(d), ka = Hx.mapKumamoto(d);
+      ok('福岡: 施設の種類は 4（老人福祉施設）', fa.kind === '4', fa.kind);
+      ok('熊本: 施設の種類も 4（老人福祉施設）', ka.kind === '4', ka.kind);
+      ok('福岡: 実給与栄養量が入る', fa.nut && Number(fa.nut.kcal.jitsu) > 500, fa.nut && fa.nut.kcal);
+      ok('福岡: ビタミンA・C も入る（成分表の key は vita / vitc）',
+        fa.nut && fa.nut.va.jitsu !== '' && fa.nut.vc.jitsu !== '', fa.nut && [fa.nut.va, fa.nut.vc]);
+      ok('福岡: エネルギー比の 3 つを足すとほぼ 100',
+        Math.abs(Number(fa.nut.pe.jitsu) + Number(fa.nut.fe2.jitsu) + Number(fa.nut.ce.jitsu) - 100) < 0.2,
+        [fa.nut.pe, fa.nut.fe2, fa.nut.ce]);
+      ok('福岡: 食品群別給与量が入る（米）', fa.food && Number(fa.food.f9.given) > 100, fa.food && fa.food.f9);
+      ok('福岡: 自動で出せない欄（豆類・みそ類）は空のまま', !(fa.food || {}).f13 && !(fa.food || {}).f14);
+      ok('熊本: 年齢階級別の人数が入る', Object.keys(ka.age.m).length + Object.keys(ka.age.f).length > 0, ka.age);
+      ok('熊本: 年齢階級の合計が今いる人数と合う', (function () {
+        let t = 0;
+        ['m', 'f'].forEach((g) => Object.keys(ka.age[g]).forEach((k) => { t += ka.age[g][k]; }));
+        return t === d.live;
+      })(), [ka.age, d.live]);
+      ok('熊本: 給与栄養量の 平均・最小・最大 が出る',
+        ka.kyuyo && ka.kyuyo.min.kcal <= ka.kyuyo.avg.kcal && ka.kyuyo.avg.kcal <= ka.kyuyo.max.kcal,
+        ka.kyuyo && [ka.kyuyo.min.kcal, ka.kyuyo.avg.kcal, ka.kyuyo.max.kcal]);
+
+      // 自動の値は、その様式の欄の id で返っていること（id が違うと画面に出ない）
+      const idsF = {}; HKf.fields(F5).forEach((x) => { idsF[x.id] = true; });
+      const badF = Object.keys(fa).filter((k) => k[0] !== '_' && !idsF[k]);
+      ok('福岡: 自動の値は全部この様式の欄の id', badF.length === 0, badF);
+      const idsK = {}; HKf.fields(K6).forEach((x) => { idsK[x.id] = true; });
+      const badK = Object.keys(ka).filter((k) => k[0] !== '_' && !idsK[k]);
+      ok('熊本: 自動の値は全部この様式の欄の id', badK.length === 0, badK);
+      ok('自動と印の付いた欄が食い違っていない', (function () {
+        const marked = HKf.autoFields(F5).map((x) => x.id);
+        return Object.keys(fa).filter((k) => k[0] !== '_').every((k) => marked.indexOf(k) >= 0);
+      })(), [HKf.autoFields(F5).map((x) => x.id), Object.keys(fa)]);
+
+      // 手で入れた値は保存され、自動より優先される
+      await Hx.save('fukuoka5', per, { tel: '0944-00-0000', kind: '1' });
+      const back2 = await Hx.load('fukuoka5', per);
+      ok('手で入れた値が保存される', back2.tel === '0944-00-0000' && back2.kind === '1', back2);
+      ok('書いた欄の数が数えられる', HKf.progress(F5, back2).done === 2, HKf.progress(F5, back2));
+      const boxH = h('div');
+      await App.screens.houkoku(['fukuoka5', per], boxH);
+      ok('報告書の画面が描ける', boxH.querySelectorAll('.hk-row').length > 40, boxH.querySelectorAll('.hk-row').length);
+      ok('自動で入れた欄に印が付く', boxH.querySelectorAll('.hk-row.hk-auto').length > 0);
+      ok('手で入れた欄には自動の印が付かない', (function () {
+        const rows = [...boxH.querySelectorAll('.hk-row')];
+        const telRow = rows.find((r2) => (r2.querySelector('.hk-label') || {}).textContent === '電話');
+        return telRow && telRow.className.indexOf('hk-auto') < 0;
+      })());
+      ok('選んだ答えは紙にも出る（ボタンとは別に文字で持つ）',
+        [...boxH.querySelectorAll('.print-only.pick')].map((x) => x.textContent).filter(Boolean).join('／').indexOf('病院') >= 0,
+        [...boxH.querySelectorAll('.print-only.pick')].map((x) => x.textContent).filter(Boolean));
+      const boxK = h('div');
+      await App.screens.houkoku(['kumamoto6', per], boxK);
+      ok('熊本の様式も描ける', boxK.querySelectorAll('.hk-row').length > 60, boxK.querySelectorAll('.hk-row').length);
+      ok('2 つの様式は別々に保存される', HKf.key('fukuoka5', per) !== HKf.key('kumamoto6', per));
+      await DB.setMeta(HKf.key('fukuoka5', per), null);
+    }
+
     // Excel の書き出し（画面側でも動くか）
     {
       const bytes = window.Xlsx.build([{ name: '試し', rows: [['あ', 1]] }]);

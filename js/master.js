@@ -3,7 +3,9 @@
 (function () {
   'use strict';
   const DEFAULTS = {
-    facility: { name: '', recorder: '' },
+    // 施設の届出・報告に使う情報。保健所に出す報告書（modules/houkoku.js）がここから引く
+    facility: { name: '', recorder: '', zip: '', addr: '', tel: '', fax: '', mail: '',
+      kanrisha: '', setchiName: '', setchiAddr: '' },
     profile: null, // 事業所プロファイル（js/profile.js）。null なら初回の登録案内を出す
     meals: [
       { id: 'b', label: '朝', on: true }, { id: 'l', label: '昼', on: true },
@@ -245,6 +247,12 @@
         if (!d) return;
         Object.keys(d).forEach((key) => { if (!(key in item)) item[key] = JSON.parse(JSON.stringify(d[key])); });
       });
+    });
+    // 素のオブジェクト（施設の情報など）も、後から増えたキーだけ補う
+    ['facility'].forEach((k) => {
+      const def = DEFAULTS[k], cur = out[k];
+      if (!def || !cur || typeof cur !== 'object') return;
+      Object.keys(def).forEach((key) => { if (!(key in cur)) cur[key] = JSON.parse(JSON.stringify(def[key])); });
     });
     out.profile = (typeof Profile !== 'undefined' ? Profile : require('./profile.js')).normalize(out.profile);
     out.phrases = (typeof Phrases !== 'undefined' ? Phrases : require('./phrases.js')).merge(out.phrases);

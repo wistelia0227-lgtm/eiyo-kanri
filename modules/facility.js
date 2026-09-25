@@ -13,6 +13,16 @@
     const m = ms();
     const name = h('input', { class: 'input', type: 'text', value: m.facility.name, placeholder: '例: ○○園' });
     const rec = h('input', { class: 'input', type: 'text', value: m.facility.recorder, placeholder: '例: 栄養 花子' });
+    // 保健所に出す報告書（modules/houkoku.js）で使う。入れておくと様式に自動で入る
+    const CONTACT = [
+      { k: 'zip', label: '郵便番号', ph: '例: 836-0000' },
+      { k: 'addr', label: '所在地', ph: '例: 福岡県大牟田市○○ 1-2-3' },
+      { k: 'tel', label: '電話' }, { k: 'fax', label: 'FAX' }, { k: 'mail', label: 'E-mail' },
+      { k: 'kanrisha', label: '管理者名', ph: '例: 施設長 ○○' },
+      { k: 'setchiName', label: '設置者（法人名）' }, { k: 'setchiAddr', label: '設置者の所在地' }
+    ];
+    const contact = {};
+    CONTACT.forEach((c) => { contact[c.k] = h('input', { class: 'input', type: 'text', value: m.facility[c.k] || '', placeholder: c.ph || '' }); });
     const dietitians = h('input', { class: 'input num', type: 'number', min: '1', value: p.dietitians || 1 });
     const supply = U.select(P.SUPPLY, p.supply, { emptyLabel: '（選んでください）' });
     let close, redraw;
@@ -74,7 +84,9 @@
       p.supply = supply.value;
       p.dietitians = parseInt(dietitians.value, 10) || 1;
       p.setupDone = true;
-      ms().facility = { name: name.value.trim(), recorder: rec.value.trim() };
+      const fac = { name: name.value.trim(), recorder: rec.value.trim() };
+      CONTACT.forEach((c) => { fac[c.k] = contact[c.k].value.trim(); });
+      ms().facility = fac;
       ms().profile = P.normalize(p);
       await window.Master.save();
       close();
@@ -85,6 +97,8 @@
       h('h2', null, '事業所の登録'),
       h('div', { class: 'sub' }, 'ここで選んだ内容に合わせて、使う機能と画面の言葉が変わります。あとから何度でも直せます。'),
       h('div', { class: 'grid3' }, U.field('事業所の名前', name), U.field('いつも記録する人', rec), U.field('管理栄養士・栄養士の人数', dietitians)),
+      h('details', { class: 'fold' }, h('summary', null, '所在地・連絡先（保健所に出す報告書に使う）'),
+        h('div', { class: 'grid3' }, CONTACT.map((c) => U.field(c.label, contact[c.k])))),
       h('h3', null, '事業所の種類（併設があれば複数選ぶ）'), kindBox,
       h('h3', null, '給食の出し方'), supply,
       h('h3', null, '算定している加算'), addonBox,

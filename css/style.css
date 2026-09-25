@@ -263,6 +263,29 @@ textarea.paper-free { width: 100%; border: 0; padding: .2rem 0; background: tran
 textarea.paper-free:focus { outline: 1px dashed var(--line); }
 .mark-cell { text-align: center; width: 5.5em; }
 tr.fill { display: none; }            /* 手書き用の空行。紙にだけ出す */
+/* 保健所に出す報告書（modules/houkoku.js）。様式の項目順に、1 項目 1 行で並べる */
+.hk-row { display: grid; grid-template-columns: 16rem 1fr; gap: .3rem .8rem; align-items: start;
+  padding: .25rem .3rem; border-bottom: 1px solid var(--line); }
+.hk-row.hk-full { grid-template-columns: 1fr; }
+.hk-label { font-size: .92rem; }
+.hk-body { min-width: 0; }           /* grid の子は既定で縮まない。表がはみ出すのを止める */
+.hk-body .input { width: 100%; }
+.hk-body .input.num { width: 8rem; }
+table.hk-grid { width: auto; }
+table.hk-grid th { white-space: nowrap; font-weight: 500; text-align: left; }
+table.hk-grid td .input { width: 5.5rem; }
+table.hk-grid td .input:not(.num) { width: 8rem; }
+.hk-auto { background: var(--info-bg, #eef4fb); }
+td.hk-auto-cell { background: var(--info-bg, #eef4fb); }
+.hk-badge { font-size: .72rem; border: 1px solid var(--line); border-radius: 3px; padding: 0 .25rem; margin-left: .3rem; color: var(--sub); }
+.paper-page { margin: 1rem 0 .3rem; font-size: 1rem; }
+details.fold > summary { cursor: pointer; margin: .4rem 0; }
+@media (max-width: 800px) { .hk-row { grid-template-columns: 1fr; } }
+@media print {
+  .hk-row { break-inside: avoid; } .hk-auto, td.hk-auto-cell { background: transparent; }
+  .hk-body .print-only.pick { display: block; min-height: 1.3em; border-bottom: 1px solid var(--line); }
+  .hk-body textarea.input, .hk-body input.input { min-height: 1.3em; }
+}
 .advice-lines { margin-top: .3rem; }
 table.kenshu th, table.kenshu td { white-space: nowrap; }
 /* 様式2 の人ごとの表。原本は「体調」「化膿創」などを縦書きで細い列にしている */
