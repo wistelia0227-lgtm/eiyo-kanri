@@ -1,4 +1,9 @@
-// 給食の帳票（削除可能）: 食品構成表 / 栄養出納表（栄養月報）/ 栄養管理報告書 の 3 つ。
+// 給食の帳票（削除可能）: 食品構成表 / 栄養出納表（栄養月報）/ 食品使用量日計表 / 栄養管理報告書。
+// 食品使用量日計表は 福岡県 様式第5号 の添付書類（「食品構成表及び食品使用量日計表を添付する」）。
+// この 3 つの帳票には決まった様式が無い（福岡県も熊本県も様式を配っていないことを確かめた。
+// 福岡市の給食の手引も「食品構成は施設ごとに作成されるべきもの」として形を決めていない）。
+// そこで、よくある形で作り、食品群の区切りだけ 様式第5号 の「提供食品量」に合わせられるようにした。
+// 合わせておくと、日計表の平均の行がそのまま報告書の「食品群別給与量」になる（突き合わせができる）。
 // 献立に入れた料理の材料から、食品群ごとの重量と栄養量を出す。手で数え直さなくて済むようにするのが目的。
 // 根拠: 横浜市「健康増進法に基づく給食施設のための栄養管理の手引き（2025年改訂版）」の帳票一覧と栄養管理報告書の様式（調査 02 の 5.2）。
 //   様式は自治体ごとに違うので、集計するところまでをこの画面が持ち、紙の様式への転記は印刷とCSVに任せる。
@@ -10,7 +15,26 @@
   const R = {};
   let tab = 'comp', shokushu = '', month = '', mode = 'plan';
 
-  R.TABS = [{ id: 'comp', label: '食品構成表' }, { id: 'out', label: '栄養出納表（月報）' }, { id: 'kanri', label: '栄養管理報告書' }];
+  R.TABS = [{ id: 'comp', label: '食品構成表' }, { id: 'out', label: '栄養出納表（月報）' },
+    { id: 'nikkei', label: '食品使用量日計表' }, { id: 'kanri', label: '栄養管理報告書' }];
+
+  // 食品群の区切り。報告書に書き写すなら様式に合わせたほうが早い
+  R.FG_SETS = [
+    { id: 'app', label: '成分表の分類（23 群）' },
+    { id: 'fukuoka', label: '福岡県 様式第5号の区分（19）' }
+  ];
+  let fgSet = 'app';
+  // 選んだ区切りの行。[{ id, label, ids: [成分表の群] , note }]
+  R.fgRows = function (setId) {
+    if (setId === 'fukuoka' && window.HoukokuForms) {
+      return window.HoukokuForms.FG_FUKUOKA.map((x, i) => ({ id: 'f' + i, label: x.label, group: x.g, ids: x.ids, note: x.note }));
+    }
+    return FG.GROUPS.map((g) => ({ id: g.id, label: g.label, ids: [g.id] }));
+  };
+  // その行のグラム数（複数の群を足す区切りがある）
+  R.fgValue = (tally, row) => row.ids.reduce((a, id) => a + ((tally.g || {})[id] || 0), 0);
+  // 「予定／実施／推定摂取」のどれで計算したか。画面の関数の外からも使う（Excel の見出しなど）
+  R.modeLabel = () => (window.Menu.MODES.find((x) => x.id === mode) || {}).label || '予定';
 
   // ---- 期間の集計 ----
   R.monthNow = () => U.today().slice(0, 7);
@@ -67,8 +91,8 @@
   // ---- 画面 ----
   function head(root, sId, ym, extra) {
     const m = ms();
-    root.appendChild(h('header', { class: 'topbar' }, h('h1', null, '帳票　' + ym.replace('-', '年') + '月'),
-      h('div', { class: 'no-print' }, h('button', { class: 'btn', onclick: () => window.print() }, '印刷'), extra || null)));
+    root.appendChild(h('header', { class: 'topbar no-print' }, h('h1', null, '帳票　' + ym.replace('-', '年') + '月'),
+      h('div', null, h('button', { class: 'btn', onclick: () => window.print() }, '印刷'), extra || null)));
     root.appendChild(h('div', { class: 'toolrow no-print' },
       R.TABS.map((t) => h('button', { class: 'btn seg' + (tab === t.id ? ' on' : ''), onclick: () => { tab = t.id; App.refresh(); } }, t.label)),
       h('span', { class: 'gap' }),
@@ -82,20 +106,25 @@
         onclick: () => { mode = x.id; App.refresh(); } }, x.label))));
   }
 
-  // 群の表（目標と実績）
-  function groupTable(avg, comp, sId, onEdit) {
-    const rows = FG.GROUPS.filter((g) => (avg.g[g.id] || comp[g.id]));
+  // 群の表（目標と実績）。rows を渡すと別の区切り（様式第5号の区分など）で出す
+  function groupTable(avg, comp, sId, onEdit, rowsIn) {
+    const rows = rowsIn
+      ? rowsIn.filter((r) => R.fgValue(avg, r) || r.ids.some((id) => comp[id]) || !r.ids.length)
+      : FG.GROUPS.filter((g) => (avg.g[g.id] || comp[g.id])).map((g) => ({ id: g.id, label: g.label, ids: [g.id] }));
     const inReport = {}; FG.REPORT_ROWS.forEach((r) => { inReport[r.id] = true; });
     const num = (v) => v == null ? '—' : Math.round(v) + ' g';
     return h('table', { class: 'list bordered' },
       h('thead', null, h('tr', null, ['食品群', '目標（1人1日）', '実績（1人1日平均）', '差', ''].map((t) => h('th', null, t)))),
       h('tbody', null, rows.map((g) => {
-        const t = comp[g.id] == null ? null : Number(comp[g.id]);
-        const a = avg.g[g.id] || 0;
+        const set = g.ids.filter((id) => comp[id] != null);
+        const t = set.length ? set.reduce((a2, id) => a2 + Number(comp[id]), 0) : null;
+        const a = R.fgValue(avg, g);
         const diff = t == null ? null : a - t;
         const cls = t == null ? '' : (Math.abs(diff) <= Math.max(5, t * 0.1) ? '' : (diff < 0 ? 'j-low' : 'j-high'));
         return h('tr', null,
-          h('th', null, g.label, inReport[g.id] ? null : h('span', { class: 'sub' }, '（報告書の欄に無い）')),
+          h('th', null, g.label,
+            g.note ? h('div', { class: 'sub no-print' }, g.note) : null,
+            (!rowsIn && !inReport[g.id]) ? h('span', { class: 'sub' }, '（報告書の欄に無い）') : null),
           h('td', { class: 'no-print-border' }, onEdit ? h('input', { class: 'input num', type: 'number', min: '0', step: '1', value: t == null ? '' : t,
             onchange: (e) => onEdit(g.id, e.target.value) }) : num(t)),
           h('td', { class: cls }, num(a)),
@@ -121,14 +150,68 @@
         ' ', h('a', { class: 'btn no-print', href: '#/menu/' + days[0] }, '献立を開く')));
       return;
     }
-    const modeLabel = (window.Menu.MODES.find((x) => x.id === mode) || {}).label || '予定';
-    root.appendChild(h('div', { class: 'sub' }, '献立が入っている ' + data.filled + ' 日ぶんの「' + modeLabel + '」で計算しました（' + days.length + ' 日中）。' +
+    const modeLabel = R.modeLabel();
+    root.appendChild(h('div', { class: 'sub no-print' }, '献立が入っている ' + data.filled + ' 日ぶんの「' + modeLabel + '」で計算しました（' + days.length + ' 日中）。' +
       (mode === 'eaten' ? '　残食率を入れていない料理は、そのままの量で数えています。' : '')));
 
     if (tab === 'comp') return drawComp(root, data, sId, ym);
     if (tab === 'out') return drawOut(root, data, sId, ym);
+    if (tab === 'nikkei') return drawNikkei(root, data, sId, ym);
     return drawKanri(root, data, sId, ym);
   });
+
+  // ---- 食品使用量日計表 ----
+  // 日ごとに、1 人 1 日当たり何グラム使ったかを食品群で並べる。福岡県 様式第5号 の添付書類。
+  function drawNikkei(root, data, sId, ym) {
+    const m = ms();
+    const rows = R.fgRows(fgSet);
+    const days = data.perDay.filter((d) => !d.empty);
+    const sum = (row) => days.reduce((a, d) => a + R.fgValue(d.group, row), 0);
+    const paper = papered('食品使用量日計表', m, sId, ym);
+    root.appendChild(paper);
+    paper.appendChild(h('div', { class: 'sub' }, '1 人 1 日当たりの使用量（g）。献立が入っている ' + days.length + ' 日ぶん。'));
+    paper.appendChild(setPicker());
+    paper.appendChild(h('div', { class: 'scroll-x' }, h('table', { class: 'list bordered small nikkei' },
+      h('thead', null, h('tr', null,
+        [h('th', null, '日')].concat(rows.map((r) => h('th', null, r.label))))),
+      h('tbody', null,
+        days.map((d) => h('tr', null, h('th', null, Number(d.date.slice(8, 10)) + '日'),
+          rows.map((r) => h('td', { class: 'num' }, Math.round(R.fgValue(d.group, r)) || '')))),
+        h('tr', { class: 'total' }, h('th', null, '合計'),
+          rows.map((r) => h('td', { class: 'num' }, Math.round(sum(r)) || ''))),
+        h('tr', { class: 'total' }, h('th', null, '平均'),
+          rows.map((r) => h('td', { class: 'num' }, Math.round(sum(r) / Math.max(1, days.length)) || '')))))));
+    if (fgSet === 'fukuoka') paper.appendChild(h('div', { class: 'sub' },
+      '平均の行が、様式第5号 ⒒ の「食品群別給与量」になります。' +
+      rows.filter((r) => !r.ids.length).map((r) => '「' + r.label + '」は成分表の分類では出せません（' + r.note + '）。').join('')));
+    root.appendChild(h('div', { class: 'card info no-print' },
+      '福岡県 様式第5号 は「食品構成表及び食品使用量日計表を添付する」としています（実給与栄養量を書けない施設の場合）。' +
+      '様式そのものは配られていないので、ここでは よくある形（日 × 食品群）で作っています。'));
+    root.appendChild(h('div', { class: 'toolrow no-print' }, h('button', { class: 'btn', onclick: () => {
+      const head1 = ['日'].concat(rows.map((r) => r.label));
+      const out = [[(m.facility.name || '') + '　' + M.label(m.shokushu, sId) + '　' + ym + '　食品使用量日計表（1人1日当たり g）'], [], head1];
+      days.forEach((d) => out.push([d.date].concat(rows.map((r) => Math.round(R.fgValue(d.group, r))))));
+      out.push(['合計'].concat(rows.map((r) => Math.round(sum(r)))));
+      out.push(['平均'].concat(rows.map((r) => Math.round(sum(r) / Math.max(1, days.length)))));
+      U.xlsx('食品使用量日計表_' + ym + '.xlsx', [{ name: '日計表', rows: out }]);
+    } }, 'Excel で保存')));
+  }
+
+  // 帳票 1 枚ぶんの台紙（表題・施設名・食種・期間・印欄）
+  function papered(title, m, sId, ym) {
+    const paper = U.paper(title, { date: '', stamps: ['責任者', '作成者'] });
+    const right = paper.querySelector('.paper-right');
+    right.insertBefore(h('div', { class: 'paper-date' },
+      (m.facility.name || '') + '　' + M.label(m.shokushu, sId) + '　' + ym.replace('-', '年') + '月'), right.firstChild);
+    return paper;
+  }
+
+  // 食品群の区切りを選ぶ
+  function setPicker() {
+    return h('div', { class: 'toolrow no-print' }, h('span', { class: 'sub' }, '食品群の区切り'),
+      R.FG_SETS.map((x) => h('button', { class: 'btn seg' + (fgSet === x.id ? ' on' : ''),
+        onclick: () => { fgSet = x.id; App.refresh(); } }, x.label)));
+  }
 
   // ---- 食品構成表 ----
   function drawComp(root, data, sId, ym) {
@@ -137,15 +220,20 @@
     const comp = m.foodComp[sId] = m.foodComp[sId] || {};
     const save = async () => { await window.Master.save(); };
 
-    root.appendChild(h('section', { class: 'card' }, h('h2', null, '食品構成表　' + M.label(m.shokushu, sId)),
-      h('div', { class: 'sub' }, '給与栄養目標量に見合うように、食品群ごとの 1 人 1 日当たりの目標量を決めた表です。' +
-        '目標の欄に数字を入れると、実績（この月の献立の平均）と見比べられます。'),
-      groupTable(data.avgGroup, comp, sId, async (id, v) => {
+    const paper = papered('食品構成表', m, sId, ym);
+    root.appendChild(paper);
+    paper.appendChild(h('div', { class: 'sub' }, '給与栄養目標量に見合うように、食品群ごとの 1 人 1 日当たりの目標量を決めた表です。' +
+      '目標の欄に数字を入れると、実績（この月の献立の平均）と見比べられます。'));
+    paper.appendChild(setPicker());
+    paper.appendChild(h('div', null,
+      groupTable(data.avgGroup, comp, sId, fgSet === 'app' ? async (id, v) => {
         const n = parseFloat(v);
         if (!(n > 0)) delete comp[id]; else comp[id] = Math.round(n);
         await save(); App.refresh();
-      }),
-      h('div', { class: 'toolrow no-print' },
+      } : null, fgSet === 'app' ? null : R.fgRows(fgSet)),
+      fgSet === 'app' ? null : h('div', { class: 'sub' }, '様式の区分でまとめて出しています。目標を直すときは「成分表の分類」に戻してください。')));
+    root.appendChild(h('section', { class: 'card no-print' },
+      h('div', { class: 'toolrow' },
         h('button', { class: 'btn primary', onclick: async () => {
           if (!await U.confirm('この月の実績（1 人 1 日平均）を、そのまま目標に入れます。今の目標は上書きされます。', { okLabel: '入れる' })) return;
           FG.GROUPS.forEach((g) => { const v = data.avgGroup.g[g.id]; if (v) comp[g.id] = Math.round(v); });
@@ -218,8 +306,10 @@
     const m = ms();
     const keys = Foods.shownKeys();
     const tgt = Menu.targetOf(sId);
-    root.appendChild(h('section', { class: 'card' }, h('h2', null, '栄養出納表　' + M.label(m.shokushu, sId) + '　' + ym.replace('-', '年') + '月'),
-      h('div', { class: 'sub' }, '毎日の提供栄養量と、その月の 1 人 1 日平均です。目標量の達成状況を見るための表（推定栄養摂取量表・栄養月報）にあたります。'),
+    const paper = papered('栄養出納表', m, sId, ym);
+    root.appendChild(paper);
+    paper.appendChild(h('div', { class: 'sub' }, '毎日の提供栄養量と、その月の 1 人 1 日平均です。目標量の達成状況を見るための表（推定栄養摂取量表・栄養月報）にあたります。'));
+    paper.appendChild(h('div', null,
       h('div', { class: 'scroll-x' }, h('table', { class: 'list bordered small' },
         h('thead', null, h('tr', null, ['日'].concat(keys.map((k) => Foods.nutrient(k).name + '(' + Foods.nutrient(k).unit + ')')).map((t) => h('th', null, t)))),
         h('tbody', null,
@@ -233,13 +323,17 @@
             return h('td', { class: j ? 'j-' + j : '' }, N.fmt(k, data.avgNut.values[k]));
           })))))));
 
-    if (tgt) root.appendChild(h('section', { class: 'card' }, h('h2', null, '目標量との対比（1 人 1 日平均）'),
-      Foods.targetTable(data.avgNut, tgt.target, keys)));
-    root.appendChild(h('section', { class: 'card' }, h('h2', null, '食品群別の平均使用量（1 人 1 日）'),
-      groupTable(data.avgGroup, (m.foodComp || {})[sId] || {}, sId, null)));
+    if (tgt) {
+      paper.appendChild(h('div', { class: 'paper-sec' }, '目標量との対比（1 人 1 日平均）'));
+      paper.appendChild(Foods.targetTable(data.avgNut, tgt.target, keys));
+    }
+    paper.appendChild(h('div', { class: 'paper-sec' }, '食品群別の平均使用量（1 人 1 日）'));
+    paper.appendChild(setPicker());
+    paper.appendChild(groupTable(data.avgGroup, (m.foodComp || {})[sId] || {}, sId, null,
+      fgSet === 'app' ? null : R.fgRows(fgSet)));
     root.appendChild(h('div', { class: 'toolrow no-print' }, h('button', { class: 'btn', onclick: () => {
       const head1 = ['日'].concat(keys.map((k) => Foods.nutrient(k).name + '(' + Foods.nutrient(k).unit + ')'));
-      const day = [[M.label(m.shokushu, sId) + '　' + ym + '　' + modeLabel], [], head1];
+      const day = [[M.label(m.shokushu, sId) + '　' + ym + '　' + R.modeLabel()], [], head1];
       data.perDay.forEach((d) => { if (!d.empty) day.push([d.date].concat(keys.map((k) => N.round(k, d.nut.values[k])))); });
       day.push(['平均'].concat(keys.map((k) => N.round(k, data.avgNut.values[k]))));
       const tg = [['栄養素', '提供量', '目標の下限', '目標の上限']];

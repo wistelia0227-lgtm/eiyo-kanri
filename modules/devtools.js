@@ -364,6 +364,43 @@
       ok('うるう年も合う（2028-02 は 29 日）', Rx.daysOf('2028-02').length === 29, Rx.daysOf('2028-02').length);
       ok('前月・次月に動ける', Rx.addMonth('2026-01', -1) === '2025-12' && Rx.addMonth('2026-12', 1) === '2027-01',
         [Rx.addMonth('2026-01', -1), Rx.addMonth('2026-12', 1)]);
+
+      // 食品群の区切り（成分表の分類 ↔ 福岡県 様式第5号の区分）
+      const rApp = Rx.fgRows('app'), rFuk = Rx.fgRows('fukuoka');
+      ok('成分表の分類は 23 群', rApp.length === FGx.GROUPS.length && rApp.length === 23, rApp.length);
+      ok('様式第5号の区分は 19', rFuk.length === 19, rFuk.length);
+      ok('区分の合計は、分類の合計と同じ（どこにも落ちない）', (function () {
+        const a2 = rApp.reduce((s2, r) => s2 + Rx.fgValue(g.avgGroup, r), 0);
+        const b2 = rFuk.reduce((s2, r) => s2 + Rx.fgValue(g.avgGroup, r), 0);
+        return Math.abs(a2 - b2) < 0.01;
+      })(), [rApp.reduce((s2, r) => s2 + Rx.fgValue(g.avgGroup, r), 0), rFuk.reduce((s2, r) => s2 + Rx.fgValue(g.avgGroup, r), 0)]);
+      ok('様式の「淡色野菜類」は その他の野菜＋野菜漬物',
+        Math.abs(Rx.fgValue(g.avgGroup, rFuk.find((r) => r.label === '淡色野菜類'))
+          - ((g.avgGroup.g.ovege || 0) + (g.avgGroup.g.pickle || 0))) < 0.01);
+      ok('何で計算したかを画面の外からも引ける（Excel の見出しに使う）', typeof Rx.modeLabel() === 'string' && Rx.modeLabel().length > 0, Rx.modeLabel());
+
+      // 食品使用量日計表（福岡県 様式第5号 の添付書類）
+      const boxN = h('div');
+      await App.screens.report(['nikkei', st.slice(0, 7)], boxN);
+      ok('日計表が台紙 1 枚で出る', boxN.querySelectorAll('.paper').length === 1, boxN.querySelectorAll('.paper').length);
+      ok('日計表の列は 日＋食品群', boxN.querySelectorAll('table.nikkei thead th').length === rApp.length + 1,
+        boxN.querySelectorAll('table.nikkei thead th').length);
+      ok('日計表は 献立のある日＋合計＋平均の行', boxN.querySelectorAll('table.nikkei tbody tr').length >= 3,
+        boxN.querySelectorAll('table.nikkei tbody tr').length);
+
+      // 日計表の平均が、報告書の「食品群別給与量」と一致すること（添付書類と本文が食い違わない）
+      const ymN = st.slice(0, 7);
+      const dataN = await Rx.gather(Rx.daysOf(ymN), 'jo', 'plan');
+      const daysN = dataN.perDay.filter((x) => !x.empty);
+      const colN = await window.Houkoku.collect(ymN, 'jo');
+      const faN = window.Houkoku.mapFukuoka(colN);
+      const bad3 = rFuk.map((r, i) => {
+        if (!r.ids.length) return null;
+        const avg2 = Math.round(daysN.reduce((a2, x) => a2 + Rx.fgValue(x.group, r), 0) / Math.max(1, daysN.length));
+        const rep = ((faN.food || {})['f' + i] || {}).given;
+        return avg2 === rep ? null : [r.label, avg2, rep];
+      }).filter(Boolean);
+      ok('日計表の平均が、報告書の食品群別給与量と一致する', bad3.length === 0, bad3);
     }
 
     // 予定献立表・調理指示書・発注書
@@ -594,9 +631,20 @@
       ok('その月の献立の日数を数えている', d.filled > 0, d.filled);
       ok('1 日あたりの食数を出している', d.meals.l > 0, d.meals);
       ok('食種別の食数を出している', d.shokushu.length > 0 && d.shokushu[0].n > 0, d.shokushu);
-      ok('食種別の合計が 朝＋昼＋夕 と合う',
-        d.shokushu.reduce((a2, x) => a2 + x.n, 0) === (d.meals.b || 0) + (d.meals.l || 0) + (d.meals.d || 0),
-        [d.shokushu.reduce((a2, x) => a2 + x.n, 0), d.meals]);
+      // 様式では「食種別給食数の合計」＝「対象者別給食数の合計」になる（記入例もそう）
+      ok('食種別の合計が 朝＋昼＋夕＋その他 と合う',
+        d.shokushu.reduce((a2, x) => a2 + x.n, 0) === d.mealTotal, [d.shokushu, d.mealTotal]);
+      ok('割り振っても合計は変わらない', (function () {
+        const t = Hx.apportion({ a: 3.4, b: 3.3, c: 3.3 }, 10);
+        return t.a + t.b + t.c === 10;
+      })(), Hx.apportion({ a: 3.4, b: 3.3, c: 3.3 }, 10));
+      ok('端数の大きいものに先に 1 が行く', Hx.apportion({ a: 3.4, b: 3.3, c: 3.3 }, 10).a === 4,
+        Hx.apportion({ a: 3.4, b: 3.3, c: 3.3 }, 10));
+      ok('合計のほうが小さい時も合う', (function () {
+        const t = Hx.apportion({ a: 5.9, b: 4.9 }, 9);
+        return t.a + t.b === 9;
+      })(), Hx.apportion({ a: 5.9, b: 4.9 }, 9));
+      ok('空でも落ちない', JSON.stringify(Hx.apportion({}, 5)) === '{}');
 
       const fa = Hx.mapFukuoka(d), ka = Hx.mapKumamoto(d);
       ok('福岡: 施設の種類は 4（老人福祉施設）', fa.kind === '4', fa.kind);

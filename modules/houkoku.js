@@ -62,9 +62,16 @@
     d.staffMeals = staffN ? Math.round(staff / staffN) : '';
     d.kikouDays = kikouDays;
     d.hygieneDays = hygieneDays;
-    d.shokushu = Object.keys(byShokushu)
-      .map((k) => ({ id: k, name: M.label(shok, k) || '（未設定）', n: Math.round(byShokushu[k] / nDays) }))
+    // 食種別の食数。様式では「食種別給食数の合計」＝「対象者別給食数の合計」になる（記入例もそう）。
+    // 食種ごとに四捨五入すると合計がずれるので、朝＋昼＋夕＋その他 に合わせて割り振る
+    const mealTotal = (Number(d.meals.b) || 0) + (Number(d.meals.l) || 0) + (Number(d.meals.d) || 0) + (Number(d.meals.o) || 0);
+    const raw = {};
+    Object.keys(byShokushu).forEach((k) => { raw[k] = byShokushu[k] / nDays; });
+    const share = H.apportion(raw, mealTotal);
+    d.shokushu = Object.keys(share)
+      .map((k) => ({ id: k, name: M.label(shok, k) || '（未設定）', n: share[k] }))
       .filter((x) => x.n > 0).sort((a, b) => b.n - a.n);
+    d.mealTotal = mealTotal;
 
     // 献立から: 給与栄養量・食品群別給与量
     const sid = shokushuId || (shok[0] && shok[0].id) || '';
@@ -118,6 +125,25 @@
     d.stapleN = (m.staple || []).length;
     d.sideN = (m.side || []).length;
     return d;
+  };
+
+  // 合計を変えずに割り振る。端数の大きいものから 1 ずつ足し、足りなければ大きいものから 1 ずつ引く
+  H.apportion = function (raw, total) {
+    const keys = Object.keys(raw);
+    const out = {};
+    let sum = 0;
+    keys.forEach((k) => { out[k] = Math.floor(raw[k]); sum += out[k]; });
+    let rest = Math.round(total) - sum;
+    if (!keys.length) return out;
+    const up = keys.slice().sort((a, b) => (raw[b] - Math.floor(raw[b])) - (raw[a] - Math.floor(raw[a])) || raw[b] - raw[a]);
+    for (let i = 0; rest > 0; i++) { out[up[i % up.length]]++; rest--; }
+    const down = keys.slice().sort((a, b) => raw[b] - raw[a]);
+    for (let i = 0; rest < 0 && i < 100000; i++) {
+      const k = down[i % down.length];
+      if (out[k] > 0) { out[k]--; rest++; }
+      else if (down.every((x) => out[x] <= 0)) break;
+    }
+    return out;
   };
 
   const r0 = (v) => v == null ? '' : Math.round(v);
