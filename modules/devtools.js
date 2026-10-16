@@ -1,6 +1,3 @@
-// 開発用（削除可能）: このファイルと index.html の script タグを消せば本番構成。
-//  index.html?demo     … 別のデータベースに見本データを入れて開く（本番のデータには触れない）
-//  index.html?selftest … 別のデータベースで自己テストを回し、結果を画面に出す
 (function () {
   'use strict';
   const U = window.U, h = U.h, DB = window.DB, M = window.Model, App = window.App;
@@ -344,6 +341,59 @@
         sup.rows.some((x) => x.r.name === '鈴木 トメ' && x.name === '高カロリーゼリー' && x.when === '15時'), sup.rows.map((x) => x.r.name));
       ok('補食は時刻でまとまる', Object.keys(sup.byTime).length >= 1 && sup.byItem['高カロリーゼリー'] >= 1, Object.keys(sup.byTime));
       ok('表示のプリセットが 3 つある', m2.nutrientPresets.length === 3 && m2.nutrientPresets[0].name === '栄養士', m2.nutrientPresets.map((p) => p.name));
+    }
+
+    // GLIM 基準（js/glim.js と modules/glim.js）
+    {
+      const Gx = window.Glim, GUx = window.GlimUI;
+      ok('Gx.CUT.loss.m6 が 5', Gx.CUT.loss.m6 === 5, Gx.CUT.loss.m6);
+      ok('Gx.CUT.loss.over6 が 10', Gx.CUT.loss.over6 === 10, Gx.CUT.loss.over6);
+      ok('Gx.CUT.bmi.under70 が 18.5', Gx.CUT.bmi.under70 === 18.5, Gx.CUT.bmi.under70);
+      ok('Gx.CUT.bmi.from70 が 20', Gx.CUT.bmi.from70 === 20, Gx.CUT.bmi.from70);
+      ok('重度の低BMI・筋肉量の既定が 4 つとも null', Gx.CUT.severe.bmiUnder70 === null && Gx.CUT.severe.bmiFrom70 === null && Gx.CUT.severe.ccM === null && Gx.CUT.severe.ccF === null, [Gx.CUT.severe.bmiUnder70, Gx.CUT.severe.bmiFrom70, Gx.CUT.severe.ccM, Gx.CUT.severe.ccF]);
+      ok('Gx.CC_SETS が 3 件', Gx.CC_SETS.length === 3, Gx.CC_SETS.length);
+      ok('GUx.conf() が ccSet と severe を持って返る', GUx.conf() && 'ccSet' in GUx.conf() && 'severe' in GUx.conf());
+      const cBefore = Gx.CUT.severe.bmiUnder70;
+      GUx.cut();
+      ok('GUx.cut() が Gx.CUT を書き換えないこと', Gx.CUT.severe.bmiUnder70 === cBefore, Gx.CUT.severe.bmiUnder70);
+      const allWeights = await window.Weights.byResident();
+      const targetRes = res.find((r) => r.heightCm && allWeights[r.id] && allWeights[r.id].length > 0) || res[0];
+      const targetMeasures = (await DB.getAll('measures')).filter((x) => x.residentId === targetRes.id);
+      const inputRes = GUx.input(targetRes, allWeights[targetRes.id] || [], targetMeasures, today);
+      ok('age と bmi が数で返ること', typeof inputRes.age === 'number' && typeof inputRes.bmi === 'number', [inputRes.age, inputRes.bmi]);
+      const assessed = Gx.assess(inputRes);
+      ok('pheno が 3 件・etio が 2 件返ること', assessed && assessed.pheno && assessed.pheno.length === 3 && assessed.etio && assessed.etio.length === 2, assessed);
+      const normalRes = res.find((r) => {
+        const w = allWeights[r.id] || [];
+        const ms = (targetMeasures).filter((x) => x.residentId === r.id);
+        const inp = GUx.input(r, w, ms, today);
+        const ass = Gx.assess(inp);
+        return ass && !ass.malnutrition;
+      }) || targetRes;
+      const normalInp = GUx.input(normalRes, allWeights[normalRes.id] || [], targetMeasures, today);
+      ok('病因基準を何も付けていない人は malnutrition が false であること', !Gx.assess(normalInp).malnutrition);
+      const targetWithPheno = res.find((r) => {
+        const w = allWeights[r.id] || [];
+        const ms = (targetMeasures).filter((x) => x.residentId === r.id);
+        const inp = GUx.input(r, w, ms, today);
+        const ass = Gx.assess(inp);
+        return ass && ass.pheno && ass.pheno.some((p) => p.hit);
+      }) || targetRes;
+      const phenoInput = GUx.input(targetWithPheno, allWeights[targetWithPheno.id] || [], targetMeasures, today);
+      phenoInput.intakeLow1 = true;
+      ok('同じ入力に intakeLow1 を立てて渡すと、表現型が 1 つ以上当たっていれば malnutrition が true になること', Gx.assess(phenoInput).malnutrition);
+      const ofKeys = Object.keys(GUx.of(targetRes));
+      ok('GUx.of(r) に病因基準などの欄がそろっていること', ofKeys.indexOf('muscleLow') >= 0 && ofKeys.indexOf('intakeLow1') >= 0 && ofKeys.indexOf('intakeLow2') >= 0 && ofKeys.indexOf('giChronic') >= 0 && ofKeys.indexOf('acute') >= 0 && ofKeys.indexOf('chronic') >= 0 && ofKeys.indexOf('note') >= 0, ofKeys);
+      const origOf = GUx.of(targetRes);
+      const testVal = Object.assign({}, origOf, { intakeLow1: true });
+      await GUx.save(targetRes, testVal);
+      const savedOf = GUx.of(targetRes);
+      ok('GUx.save(r, 値) で保存でき、読み直すと入っていること', savedOf.intakeLow1 === true);
+      GUx.save(targetRes, origOf);
+      const boxGl = h('div');
+      await App.screens.glim([today], boxGl);
+      ok('画面が描けること・table があり行が 1 つ以上', boxGl.querySelector('table') && boxGl.querySelector('table').rows.length > 0, boxGl.querySelectorAll('table').length);
+      ok('今の低栄養リスク（施設基準）の欄が消えていないこと', boxGl.textContent.indexOf('施設基準') >= 0);
     }
 
     // 帳票（食品構成表・栄養出納表・栄養管理報告書）
