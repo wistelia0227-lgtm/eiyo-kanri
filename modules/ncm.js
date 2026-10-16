@@ -41,6 +41,25 @@
     const chk = (obj, key, text) => h('label', { class: 'check' }, h('input', { type: 'checkbox', checked: !!obj[key],
       onchange: (e) => { obj[key] = e.target.checked; refreshLevel(); } }), ' ' + text);
 
+    const glimWords = h('span');
+    const glimBtn = window.Glim ? h('button', {
+      type: 'button',
+      class: 'btn no-print',
+      onclick: async () => {
+        if (!window.Glim || !window.GlimUI) {
+          U.toast('GLIM の画面を外しているので使えません', true);
+          return;
+        }
+        const byRes = await window.Weights.byResident();
+        const msr = (await DB.getAll('measures')).filter((x) => x.residentId === r.residentId);
+        const person = await DB.get('residents', r.residentId);
+        const inp = window.GlimUI.input(person, byRes[r.residentId] || [], msr, r.date || U.today());
+        const res = window.Glim.assess(inp, window.GlimUI.cut());
+        f.glim.value = !res.malnutrition ? 'no' : (res.severity === 'severe' ? 'severe' : 'mid');
+        glimWords.textContent = window.Glim.words(res);
+      }
+    }, 'この施設の記録から判定') : null;
+
     const f = {
       height: num(r.body, 'heightCm', '0.1', 'cm'), weight: num(r.body, 'weightKg', '0.1', 'kg'),
       loss1: num(r.body, 'loss1', '0.1', '%'), loss3: num(r.body, 'loss3', '0.1', '%'), loss6: num(r.body, 'loss6', '0.1', '%'),
@@ -202,7 +221,7 @@
       ijiBox,
       h('div', { class: 'grid3' }, U.field('総合評価', f.evaluation),
         U.field('計画変更', h('div', null, chk(r, 'planChange', '計画を変更する'))),
-        U.field('GLIM基準（医療機関から情報提供があった場合）', f.glim)),
+        U.field('GLIM基準（医療機関からの情報提供、または施設で判定）', h('div', null, f.glim, glimBtn, glimWords))),
       U.field('特記事項', U.withPhrases('ncm.special', f.special)),
       h('div', { class: 'modal-btns' },
         (!isNew) ? h('button', { class: 'btn danger-outline', onclick: async () => {

@@ -394,6 +394,17 @@
       await App.screens.glim([today], boxGl);
       ok('画面が描けること・table があり行が 1 つ以上', boxGl.querySelector('table') && boxGl.querySelector('table').rows.length > 0, boxGl.querySelectorAll('table').length);
       ok('今の低栄養リスク（施設基準）の欄が消えていないこと', boxGl.textContent.indexOf('施設基準') >= 0);
+      ok('栄養ケアの GLIM の選択肢が no / mid / severe', (() => {
+        // window.Ncm は画面側、window.NCM が計算側（GLIM の選択肢を持つのは後者）
+        const Nc = (window.NCM && window.NCM.GLIM) ? window.NCM : window.Ncm;
+        return Nc && Nc.GLIM && Nc.GLIM.map((x) => x.id).join() === ',no,mid,severe';
+      })());
+      ok('LIFE: 低栄養 非該当 → 1', window.Life.GLIM.no === '1');
+      ok('LIFE: 中等度・重度 → 2', window.Life.GLIM.mid === '2' && window.Life.GLIM.severe === '2');
+      const toNcm = (res) => !res.malnutrition ? 'no' : (res.severity === 'severe' ? 'severe' : 'mid');
+      ok('低栄養でなければ 非該当', toNcm({ malnutrition: false, severity: null }) === 'no');
+      ok('中等度は mid', toNcm({ malnutrition: true, severity: 'moderate' }) === 'mid');
+      ok('重度は severe', toNcm({ malnutrition: true, severity: 'severe' }) === 'severe');
     }
 
     // 帳票（食品構成表・栄養出納表・栄養管理報告書）
