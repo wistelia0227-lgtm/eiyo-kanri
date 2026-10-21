@@ -1039,7 +1039,8 @@
       const many = Object.assign(JSON.parse(JSON.stringify(M.versionAt(tgt, slotC, m2.meals).data)), {
         allergy: ['えび', 'かに', '小麦', 'そば', '卵', '乳'],
         kinshi: kin.map((s) => ({ food: s.split('→')[0], sub: s.split('→')[1] })) });
-      tgt.diet.push({ id: 'v_fit' + kin.length, from: { d: M.addDays(today, -1), m: 'b' }, data: many, recordedAt: Date.now() });
+      // その枠ちょうどから効く版にする（今日の昼から変わる人もいるので、前日からだと負けることがある）
+      tgt.diet.push({ id: 'v_fit' + kin.length, from: { d: today, m: 'l' }, data: many, recordedAt: Date.now() });
       await DB.put('residents', tgt);
       const boxC = h('div'); document.body.appendChild(boxC);
       await App.screens.cards([today, 'l'], boxC);
@@ -1099,6 +1100,29 @@
       ok('書き戻すと相手の料理が入っている', !!(await DB.get('dishes', 'zz-new')));
       ok('書き戻しても利用者の数は変わらない', (await DB.getAll('residents')).length === n0);
       await DB.del('dishes', 'zz-new');
+
+      // 合わせている間に、この画面で利用者を直した（読んだ後・書き戻す前）。書き戻しで消えないこと
+      {
+        const loc = await DB.exportAll();
+        const resX = Sy.merge(loc, Sy.pack({ dishes: [{ id: 'zz-r2', name: '相手の料理2', _at: Date.now() + 1000, _by: 'pc-b' }] }, [], 'pc-b'));
+        const one = (await DB.residents())[0];
+        one.absences.push({ id: 'ab-race', from: { d: today, m: 'd' }, to: { d: today, m: 'd' }, reason: '外出', recordedAt: Date.now() });
+        await DB.put('residents', one);
+        await DB.applyMerge(resX);
+        ok('書き戻しの直前に読み直して混ぜる: 合わせている間に足した欠食が消えない',
+          ((await DB.get('residents', one.id)).absences || []).some((a) => a.id === 'ab-race'));
+        ok('書き戻しの直前に読み直して混ぜる: 相手の料理も入る', !!(await DB.get('dishes', 'zz-r2')));
+        await DB.del('dishes', 'zz-r2');
+        // 画面が開いた時に読んだ利用者（古い）を、裏で突き合わせが新しくした後に保存した
+        const stale = M.normalizeResident(JSON.parse(JSON.stringify(await DB.get('residents', one.id))));
+        const fresh = await DB.get('residents', one.id);
+        fresh.absences.push({ id: 'ab-sync', from: { d: today, m: 'l' }, to: { d: today, m: 'l' }, reason: '受診', recordedAt: Date.now() });
+        await DB.put('residents', fresh);
+        stale.memo = '画面で書いたメモ';
+        await DB.put('residents', stale);
+        const got2 = await DB.get('residents', one.id);
+        ok('保存の直前に読み直して混ぜる: 裏で入った欠食が、古い画面の保存で消えない', got2.absences.some((a) => a.id === 'ab-sync') && got2.memo === '画面で書いたメモ', [got2.absences.map((a) => a.id), got2.memo]);
+      }
 
       // このパソコンだけの覚え書きは、書き出しに入らない
       await DB.setLocal('probe', { a: 1 });

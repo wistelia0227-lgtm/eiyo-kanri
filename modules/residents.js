@@ -236,15 +236,19 @@
       let carry = false;
       if (later.length && (add.allergy.length || add.kinshi.length)) {
         carry = await U.confirm(h('div', null,
-          h('div', { class: 'warn-text' }, h('b', null, '後に予定の食事情報があります: '), later.map((v) => V.slotText(v.from, 'から')).join('、')),
+          h('div', { class: 'warn-text' }, h('b', null, '後に予定の食事情報があります: '), Array.from(new Set(later.map((v) => V.slotText(v.from, 'から')))).join('、')),
           h('div', null, '今回足した ', h('b', null, add.allergy.map((x) => 'アレルギー ' + x).concat(add.kinshi.map((k) => '禁食 ' + k.food)).join('、')),
             ' を、予定の食事情報にも入れますか？'),
           h('div', { class: 'sub' }, '入れないと、予定の日からはアレルギー・禁食が今回の前の内容に戻ります。食種・形態などほかの変更は予定の版には入りません。')),
         { okLabel: '予定にも入れる（おすすめ）', cancelLabel: '入れない' });
       }
       V.setRecorder(by.value.trim());
-      r.diet.push({ id: U.uid('v'), from: a, data: data, source: source.value.trim(), reason: reason.value.trim(), doctor: doctor.value,
-        riskExplained: risk.checked, by: by.value.trim(), recordedAt: Date.now() });
+      const nv = { id: U.uid('v'), from: a, data: data, source: source.value.trim(), reason: reason.value.trim(), doctor: doctor.value,
+        riskExplained: risk.checked, by: by.value.trim(), recordedAt: Date.now() };
+      // 外したアレルギー・禁食には「外した」印を残す（複数のパソコンで突き合わせる時、印の無い消え方は和に戻す。js/sync.js）
+      const gone = M.restrictionAdds(data, base ? base.data : null);
+      if (gone.allergy.length || gone.kinshi.length) nv.removed = { allergy: gone.allergy, kinshi: gone.kinshi.map((k) => k.food) };
+      r.diet.push(nv);
       if (carry) M.applyToLater(r, later, add, { by: by.value.trim(), uid: U.uid });
       await DB.put('residents', r); close(); U.toast('保存しました'); App.refresh();
     };

@@ -78,7 +78,23 @@
 
   DB.getAll = (store) => run(store, 'readonly', (s) => s.getAll());
   DB.get = (store, id) => run(store, 'readonly', (s) => s.get(id));
-  DB.put = (store, obj) => run(store, 'readwrite', (s) => s.put(stamp(obj)));
+  // 利用者は、保存の直前に今の中身を読み直し、画面が読んだ後に別の所（突き合わせなど）で
+  // 変わっていたら、食事の版・在籍・欠食を id ごとに混ぜてから書く（js/sync.js の mergeResident）。読むのと書くのは 1 つのトランザクション
+  DB.put = function (store, obj) {
+    if (store !== 'residents' || !obj || !window.Sync) return run(store, 'readwrite', (s) => s.put(stamp(obj)));
+    const seen = obj._at;
+    return run(store, 'readwrite', (s) => {
+      const rq = s.get(obj.id);
+      rq.onsuccess = () => {
+        const cur = rq.result;
+        stamp(obj);
+        if (cur && typeof cur._at === 'number' && obj._at <= cur._at) obj._at = cur._at + 1;   // 今書く側を必ず新しいほうにする
+        const meals =window.Master && window.Master.current ? window.Master.current.meals : null;
+        s.put((cur && typeof cur._at === 'number' && cur._at !== seen) ? Object.assign(window.Sync.mergeResident(cur, obj, meals).rec, { _at: obj._at, _by: obj._by }) : obj);
+      };
+      return null;
+    });
+  };
   DB.putMany = (store, list) => run(store, 'readwrite', (s) => { list.forEach((o) => s.put(stamp(o))); });
   // 印を付け直さずに書く（ファイルから取り込む時。取り込んだ記録の時刻は相手のものを保つ）
   DB.putRaw = (store, list) => run(store, 'readwrite', (s) => { list.forEach((o) => s.put(o)); });
@@ -123,10 +139,31 @@
     for (const s of DB.STORES) { await DB.clear(s); if (data.stores[s]) await DB.putRaw(s, data.stores[s]); }
     await DB.setTomb(data.tomb || []);
   };
-  // 突き合わせの結果を書き戻す
-  DB.applyMerge = async function (res) {
-    for (const s of DB.STORES) { await DB.clear(s); await DB.putRaw(s, res.stores[s] || []); }
-    await DB.setTomb(res.tomb || []);
+  // 突き合わせの結果を書き戻す。1 つのトランザクションの中で、書く直前に今の中身を読み直して
+  // 結果と混ぜてから書く（合わせている間にこの画面で直した分を消さない。途中で失敗したら何も書かない）。
+  // 返り: 実際に書いた中身（S.merge の形）。opts.meals = 食事の並び
+  DB.applyMerge = function (res, opts) {
+    opts = opts || { meals: window.Master && window.Master.current ? window.Master.current.meals : null };
+    const names = DB.STORES.concat(['tomb']);
+    return open().then((db) => new Promise((resolve, reject) => {
+      const tx = db.transaction(names, 'readwrite');
+      const cur = {};
+      let left = names.length, done = null;
+      const write = () => {
+        try {
+          const S = window.Sync, stores = {};
+          DB.STORES.forEach((s) => { stores[s] = cur[s]; });
+          const now = S.pack(stores, cur.tomb.map((t) => ({ store: t.store, id: t.id, at: t.at, by: t.by })), '');
+          done = S.merge(now, S.pack(res.stores, res.tomb || [], ''), undefined, opts);
+          DB.STORES.forEach((s) => { const os = tx.objectStore(s); os.clear(); (done.stores[s] || []).forEach((o) => os.put(o)); });
+          const ts = tx.objectStore('tomb'); ts.clear();
+          done.tomb.forEach((t) => ts.put({ k: tombKey(t.store, t.id), store: t.store, id: t.id, at: t.at, by: t.by }));
+        } catch (e) { try { tx.abort(); } catch (e2) { /* もう終わっている */ } reject(e); }
+      };
+      names.forEach((s) => { const rq = tx.objectStore(s).getAll(); rq.onsuccess = () => { cur[s] = rq.result; if (--left === 0) write(); }; });
+      tx.oncomplete = () => resolve(done);
+      tx.onerror = tx.onabort = () => reject(tx.error || new Error('保存に失敗しました'));
+    }));
   };
   // まだ印の無い記録に、いま印を付ける（共有を始める時の 1 回だけ）
   DB.stampAll = async function () {

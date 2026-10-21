@@ -119,6 +119,58 @@ ok('印の無い記録は一番古い扱い', S.newer(r('x', 0), { id: 'x' }) ==
   ok('よそのファイルは弾く', threw);
 })();
 
+// ---- 2026-10-22: 利用者 1 件の中身（食事の版・在籍・欠食）を id ごとに混ぜる ----
+(function () {
+  const meals = [{ id: 'b' }, { id: 'l' }, { id: 's' }, { id: 'd' }];
+  const D = (al, ki, o) => Object.assign({ shokushu: 'jo', staple: 'rice', allergy: al, kinshi: (ki || []).map((f) => ({ food: f, sub: '' })) }, o || {});
+  const v1 = { id: 'v1', from: { d: '2026-10-01', m: 'b' }, data: D(['えび']), recordedAt: T + 10 };
+  const base = () => JSON.parse(JSON.stringify(r('rx', 50, 'a', { name: '山田 ハナ', diet: [v1], stays: [{ id: 's1', from: { d: '2026-10-01', m: 'b' }, to: null, recordedAt: T + 10 }], absences: [] })));
+  // A: アレルギーに卵を足した版（10/20 昼から）と、外出の欠食
+  const A = base(); A._at = T + 200; A._by = 'pc-a';
+  A.diet.push({ id: 'vA', from: { d: '2026-10-20', m: 'l' }, data: D(['えび', '卵']), recordedAt: T + 150 });
+  A.absences.push({ id: 'abA', from: { d: '2026-10-25', m: 'l' }, to: { d: '2026-10-25', m: 'l' }, reason: '外出', recordedAt: T + 160 });
+  // B: 卵を知らないまま、主食を全粥に変えた版（10/21 朝から）と、退所日の記入
+  const B = base(); B._at = T + 300; B._by = 'pc-b';
+  B.diet.push({ id: 'vB', from: { d: '2026-10-21', m: 'b' }, data: D(['えび'], [], { staple: 'kayu' }), recordedAt: T + 170 });
+  B.stays[0].to = { d: '2026-10-31', m: 'b' }; B.stays[0].changes = [{ at: T + 180, label: '退所日', old: null, new: { d: '2026-10-31', m: 'b' } }];
+
+  const res = S.merge(pack({ residents: [A] }), pack({ residents: [B] }), T, { meals: meals });
+  const x = res.stores.residents[0];
+  const ids = (k) => (x[k] || []).map((e) => e.id).sort().join(',');
+  ok('混ぜる: 両方で足した食事の版が両方残る', ids('diet') === 'v1,vA,vB', ids('diet'));
+  ok('混ぜる: 片方で足した欠食が消えない', ids('absences') === 'abA', ids('absences'));
+  ok('混ぜる: もう片方で直した退所日も残る', x.stays[0].to && x.stays[0].to.d === '2026-10-31', x.stays[0]);
+  const vB = x.diet.find((e) => e.id === 'vB');
+  ok('混ぜる: 後から効く版（全粥）にも、もう片方で足したアレルギーの卵が残る', vB.data.allergy.indexOf('卵') >= 0 && vB.data.staple === 'kayu', vB.data);
+  ok('混ぜる: 入力の記録そのものは書き換えない', B.diet[1].data.allergy.join() === 'えび' && A.diet.length === 2);
+  ok('混ぜる: 結果は両方と違うので時刻が進む（両方に書き戻す）', x._at === T + 301 && S.differs({ residents: [A] }, res.stores) && S.differs({ residents: [B] }, res.stores), x._at);
+  const rev = S.merge(pack({ residents: [B] }), pack({ residents: [A] }), T, { meals: meals }).stores.residents[0];
+  ok('混ぜる: どちらのパソコンから合わせても同じ結果', JSON.stringify(rev) === JSON.stringify(x));
+  ok('混ぜる: 結果に名前と何を混ぜたかが出る', (res.notes || []).some((s) => /山田 ハナ/.test(s) && /卵/.test(s)), res.notes);
+  // 混ぜた結果をもう一度片方と合わせても変わらない（落ち着く）
+  const again = S.merge(pack({ residents: [x] }), pack({ residents: [A] }), T, { meals: meals });
+  ok('混ぜる: 混ぜた結果は古い側と合わせ直しても変わらない', JSON.stringify(again.stores.residents[0]) === JSON.stringify(x));
+
+  // アレルギーを外すのは、外した印がある時だけ
+  const B2 = base(); B2._at = T + 300; B2._by = 'pc-b';
+  B2.diet.push({ id: 'vB2', from: { d: '2026-10-21', m: 'b' }, data: D([]), removed: { allergy: ['えび'], kinshi: [] }, recordedAt: T + 170 });
+  const A2 = base(); A2._at = T + 200; A2._by = 'pc-a';
+  A2.diet.push({ id: 'vA2', from: { d: '2026-10-22', m: 'b' }, data: D(['えび'], ['そば']), recordedAt: T + 190 });
+  const y = S.merge(pack({ residents: [A2] }), pack({ residents: [B2] }), T, { meals: meals }).stores.residents[0];
+  const vA2 = y.diet.find((e) => e.id === 'vA2');
+  ok('外した印のあるアレルギーは、後から効く版からも外れる', vA2.data.allergy.indexOf('えび') < 0 && vA2.data.kinshi.some((k) => k.food === 'そば'), vA2.data);
+  const B3 = base(); B3._at = T + 300; B3._by = 'pc-b';
+  B3.diet.push({ id: 'vB3', from: { d: '2026-10-21', m: 'b' }, data: D([]), recordedAt: T + 170 });   // 印なしで消えている
+  const z = S.merge(pack({ residents: [A2] }), pack({ residents: [B3] }), T, { meals: meals }).stores.residents[0];
+  ok('外した印が無ければ、新しい側でもアレルギーは消さない', z.diet.find((e) => e.id === 'vA2').data.allergy.indexOf('えび') >= 0);
+
+  // 取り消しの印は消えない
+  const C1 = base(); C1._at = T + 200; C1.diet[0].cancelledAt = T + 120;
+  const C2 = base(); C2._at = T + 300; C2.name = '山田 花';
+  const c = S.merge(pack({ residents: [C1] }), pack({ residents: [C2] }), T, { meals: meals }).stores.residents[0];
+  ok('片方で取り消した版は、もう片方が新しくても取り消したまま', !!c.diet[0].cancelledAt && c.name === '山田 花', c.diet[0]);
+})();
+
 // ---- ストアの鍵が js/db.js と合っているか ----
 (function () {
   const fs = require('fs'), path = require('path');

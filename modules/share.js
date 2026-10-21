@@ -60,6 +60,12 @@
     return f.lastModified;
   }
 
+  // 突き合わせの決まり（食事の版の前後を決める食事の並び）
+  const mergeOpts = () => ({ meals: window.Master && window.Master.current ? window.Master.current.meals : null });
+  // 誰の何が変わったか（知らせの後ろに付ける。多い時は 3 人まで）
+  const noteText = (res) => (res && res.notes && res.notes.length)
+    ? '\n' + res.notes.slice(0, 3).join('\n') + (res.notes.length > 3 ? '\nほか ' + (res.notes.length - 3) + ' 人（設定の「複数のパソコンで使う」に全部出ます）' : '') : '';
+
   // ---- 突き合わせ本体 ----
   // 返り: { ok, res, wrote, words } / つながらない時は { ok:false, why }
   Share.sync = async function (opts) {
@@ -75,8 +81,13 @@
       for (let i = 0; i < 3; i++) {
         const remote = await readRemote();
         const local = await DB.exportAll();
-        res = S.merge(local, remote.data);
-        if (S.differs(local.stores, res.stores)) { await DB.applyMerge(res); await window.Master.load(); }
+        res = S.merge(local, remote.data, undefined, mergeOpts());
+        if (S.differs(local.stores, res.stores)) {
+          // 書く直前に読み直して混ぜる（DB.applyMerge）。共有ファイルへは、実際に書いた中身を書く
+          const fin = await DB.applyMerge(res, mergeOpts());
+          res.stores = fin.stores; res.tomb = fin.tomb;
+          await window.Master.load();
+        }
         if (!S.differs(remote.data.stores, res.stores) && (remote.data.tomb || []).length === res.tomb.length) break;
         // 書く直前にもう一度見る。相手が書いていたら混ぜ直す
         const again = await handle.getFile();
@@ -89,9 +100,10 @@
       info.lastSync = Date.now();
       if (!wrote) { const f = await handle.getFile(); info.remoteAt = f.lastModified; }
       info.lastWords = S.words(res) + (wrote ? '・共有ファイルへ書きました' : '');
+      if (res.changed) info.lastNotes = (res.notes || []).slice(0, 50);
       await saveState();
       lastPush = mark;
-      if (!opts.silent) U.toast(info.lastWords);
+      if (!opts.silent) U.toast(info.lastWords + noteText(res));
       if (res.changed && !opts.noRefresh) App.refresh();
       return { ok: true, res: res, wrote: wrote, words: info.lastWords };
     } catch (e) {
@@ -199,8 +211,8 @@
     S.check(data);
     if ((data.format || 1) < S.FORMAT) data = S.upgrade(data, data.savedAt || Date.now() - 86400000, data.device || 'ファイル');
     const local = await DB.exportAll();
-    const res = S.merge(local, data);
-    if (S.differs(local.stores, res.stores)) { await DB.applyMerge(res); await window.Master.load(); }
+    const res = S.merge(local, data, undefined, mergeOpts());
+    if (S.differs(local.stores, res.stores)) { await DB.applyMerge(res, mergeOpts()); await window.Master.load(); }
     return res;
   };
 
@@ -225,6 +237,10 @@
       root.appendChild(h('div', { class: 'rowline' }, h('span', null, '共有ファイル'), h('b', null, info.name)));
       root.appendChild(h('div', { class: 'rowline' }, h('span', null, '最後に合わせたのは'),
         h('span', { class: 'sub' }, info.lastSync ? U.fmtDateTime(info.lastSync) + '（' + (info.lastWords || '') + '）' : 'まだです')));
+      if (info.lastNotes && info.lastNotes.length) {
+        root.appendChild(h('details', null, h('summary', null, '最後に変わった人（' + info.lastNotes.length + '）'),
+          h('ul', null, info.lastNotes.map((t) => h('li', null, t)))));
+      }
       if (st !== 'granted') {
         root.appendChild(h('div', { class: 'card warn' }, '共有ファイルを使う許しが切れています。ブラウザを開き直すと毎回こうなります。',
           h('div', { class: 'toolrow' }, h('button', { class: 'btn primary', onclick: async () => { await perm(true); await Share.sync({}); App.refresh(); } }, 'つなぎ直す'))));
@@ -245,7 +261,7 @@
         const text = await U.pickFile('.json'); if (!text) return;
         try {
           const res = await Share.mergeFromText(text);
-          U.toast(S.words(res));
+          U.toast(S.words(res) + noteText(res));
           App.refresh();
         } catch (e) { U.toast(e.message, true); }
       } }, 'ファイルを読んで合わせる')));

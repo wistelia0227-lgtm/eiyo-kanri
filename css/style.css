@@ -21,7 +21,7 @@ h2.sec { margin: 1.4rem 0 .5rem; }
 .nav-note { margin-top: 1rem; padding: .5rem; font-size: .8rem; background: var(--warnbg); color: var(--warn); border-radius: 6px; }
 #root { flex: 1; min-width: 0; padding: 1rem 1.4rem 4rem; max-width: 1500px; }
 #errbar { background: var(--bad); color: #fff; padding: .5rem 1rem; position: sticky; top: 0; z-index: 50; }
-#toast { position: fixed; left: 50%; bottom: 2rem; transform: translateX(-50%); background: #374151; color: #f3f4f6; padding: .6rem 1.2rem; border-radius: 8px; z-index: 200; }
+#toast { position: fixed; left: 50%; bottom: 2rem; transform: translateX(-50%); background: #374151; color: #f3f4f6; padding: .6rem 1.2rem; border-radius: 8px; z-index: 200; white-space: pre-line; }
 #toast.err { background: var(--bad); }
 
 .topbar { display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem; margin-bottom: .8rem; flex-wrap: wrap; }
