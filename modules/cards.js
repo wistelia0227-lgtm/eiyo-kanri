@@ -291,7 +291,7 @@
           h('td', null, x.hits.map((hh) => h('div', null, hh.sub || '—'))),
           h('td', { class: 'sub' }, V.dietShort(x.diet))))))
         : h('div', { class: 'card ok' }, '当たる人はいません。'));
-      out.appendChild(h('div', { class: 'sub' }, '名前の一致で拾っています。加工品（マヨネーズに卵、ちくわに小麦 など）は名前に出ないので漏れます。原材料を確かめてください。'));
+      out.appendChild(h('div', { class: 'sub' }, '名前の一致で拾っています（ひらがな・カタカナ・成分表の名前と、パン・うどん・マヨネーズ などよくある加工品の言いかえを含む）。言いかえ表に無い加工品は漏れます。原材料を確かめてください。'));
     };
     const btn = h('button', { class: 'btn primary no-print', onclick: draw }, 'さがす');
     root.appendChild(h('div', { class: 'toolrow no-print' }, chips, btn));

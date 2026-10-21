@@ -20,12 +20,10 @@
   };
   D.all = async function () { return (await DB.getAll('dishes')).map(D.normalize); };
 
-  // 材料に含まれるアレルギー品目を、名前の一致で拾って候補にする（判定は人が確かめる）
+  // 材料に含まれるアレルギー品目を、言いかえ表（Model.ALLERGEN_WORDS: こむぎ・だいず・パン など）を通した名前の一致で拾って候補にする（判定は人が確かめる）
   D.suggestAllergy = function (items) {
-    const words = ms().allergens;
-    const hit = [];
-    (items || []).forEach((it) => { words.forEach((w) => { if (it.name && it.name.indexOf(w) >= 0 && hit.indexOf(w) < 0) hit.push(w); }); });
-    return hit;
+    const names = (items || []).map((it) => it.name).filter(Boolean);
+    return ms().allergens.filter((w) => window.Model.wordHits(w, names).length > 0);
   };
 
   D.edit = function (dish) {
