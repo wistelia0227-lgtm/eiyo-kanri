@@ -94,7 +94,34 @@
     const d = M.normalizeDiet(v.data);
     return Object.assign({}, d, d.byMeal[slot.m] || {});
   };
-  // 食事を変更する時に、元の内容にする版 = 「いつから」の時点で有効な版（先の予定の版ではない）
+  // 入所時の聞き取り（modules/intake.js）を食事情報に写す時の、元の内容
+  // = その時点の版の中身そのもの（dietAt は朝食などの個別設定を上に混ぜた形なので使わない）
+  M.intakeBase = function (r, slot, meals) {
+    const v = M.versionAt(r, slot, meals);
+    return v ? M.normalizeDiet(JSON.parse(JSON.stringify(v.data))) : null;
+  };
+  // 聞き取りのうち、食事情報に写せるものを写す。アレルギー・禁食は置き換えず和にする（消える方向に写さない）
+  M.intakeToDiet = function (v, diet) {
+    const d = M.normalizeDiet(JSON.parse(JSON.stringify(diet || M.emptyDiet())));
+    const allergy = d.allergy, kinshi = d.kinshi;
+    if (v.shokushu) d.shokushu = v.shokushu;
+    if (v.staple) d.staple = v.staple;
+    if (v.stapleG) d.stapleG = Number(v.stapleG) || null;
+    if (v.side) d.side = v.side;
+    if (v.drinkThick) d.drinkThick = v.drinkThick;
+    if (v.assist) d.assist = v.assist;
+    if (v.tools && v.tools.length) d.tools = v.tools.slice();
+    (v.allergy || []).forEach((a) => { if (a && allergy.indexOf(a) < 0) allergy.push(a); });
+    (v.kinshi || []).map((k) => (typeof k === 'string' ? { food: k, sub: '' } : k)).forEach((k) => {
+      if (k && k.food && !kinshi.some((o) => o.food === k.food)) kinshi.push({ food: k.food, sub: k.sub || '' });
+    });
+    if (v.suppName) d.supplements = [{ name: v.suppName, when: '' }];
+    const notes = [v.sideWord ? '前の施設: ' + v.sideWord : '', v.thickWord ? 'とろみの呼び方: ' + v.thickWord : '',
+      v.swWay && v.swWay.length ? v.swWay.join('・') : '', v.drugNg ? '服薬の禁忌: ' + v.drugNg : ''].filter(Boolean).join('　');
+    if (notes) d.notes = [d.notes, notes].filter(Boolean).join('　');
+    return d;
+  };
+  // 食事を変更する時に、元の内容にする版 =「いつから」の時点で有効な版（先の予定の版ではない）
   M.editBase = function (r, slot, meals) { return M.versionAt(r, slot, meals); };
   // 「いつから」より後に始まる予定の版（取り消していないもの）。早い順
   M.laterVersions = function (r, slot, meals) {

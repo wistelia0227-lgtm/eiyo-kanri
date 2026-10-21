@@ -49,5 +49,20 @@ const ver = (d, m, data, at) => ({ id: uid('v'), from: { d: d, m: m }, data: Obj
   ok('外しただけなら予定の版は触らない', M.applyToLater(r, [plan], add, { at: 5 }) === 0 && !plan.cancelledAt);
 })();
 
+// ---- 4. 入所時の聞き取りを食事情報に写す ----
+(function () {
+  const v1 = ver('2026-10-01', 'b', { staple: 'rice', allergy: ['えび'], kinshi: [{ food: '鶏肉', sub: '魚' }], byMeal: { b: { staple: 'bread' } } }, 1);
+  const r = res({ diet: [v1] });
+  const base = M.intakeBase(r, { d: '2026-10-22', m: 'b' }, meals);
+  ok('元の内容は朝食用の個別設定を混ぜていない（主食は米飯のまま）', base.staple === 'rice', base.staple);
+  ok('朝だけパンの個別設定は残る', base.byMeal && base.byMeal.b && base.byMeal.b.staple === 'bread', base.byMeal);
+  const next = M.intakeToDiet({ allergy: ['卵'], kinshi: ['そば'] }, base);
+  ok('聞き取りのアレルギーは足す（元のえびが消えない）', next.allergy.join() === 'えび,卵', next.allergy);
+  ok('聞き取りの禁食は足す（元の鶏肉→魚が消えない）', next.kinshi.map((k) => k.food + '→' + k.sub).join() === '鶏肉→魚,そば→', next.kinshi);
+  const again = M.intakeToDiet({ allergy: ['えび'], kinshi: [{ food: '鶏肉', sub: '' }] }, next);
+  ok('同じ物は二重にしない（代わりの物の指定も消さない）', again.allergy.join() === 'えび,卵' && again.kinshi.find((k) => k.food === '鶏肉').sub === '魚', again);
+  ok('元の版の中身は書き換えない', v1.data.allergy.join() === 'えび' && v1.data.kinshi.length === 1);
+})();
+
 console.log('\n' + (n - bad) + '/' + n + ' 通過' + (bad ? '  ★ 失敗 ' + bad + ' 件' : ''));
 process.exit(bad ? 1 : 0);

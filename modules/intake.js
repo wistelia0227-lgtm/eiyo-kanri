@@ -86,23 +86,7 @@
   I.filled = (r) => { const v = I.get(r); return Object.keys(v).some((k) => v[k] !== '' && v[k] != null && !(Array.isArray(v[k]) && !v[k].length)); };
 
   // 聞き取りのうち、食事情報に写せるものを写す
-  I.toDiet = function (v, diet) {
-    const d = Object.assign({}, diet || M.emptyDiet());
-    if (v.shokushu) d.shokushu = v.shokushu;
-    if (v.staple) d.staple = v.staple;
-    if (v.stapleG) d.stapleG = Number(v.stapleG) || null;
-    if (v.side) d.side = v.side;
-    if (v.drinkThick) d.drinkThick = v.drinkThick;
-    if (v.assist) d.assist = v.assist;
-    if (v.tools && v.tools.length) d.tools = v.tools.slice();
-    if (v.allergy && v.allergy.length) d.allergy = v.allergy.slice();
-    if (v.kinshi && v.kinshi.length) d.kinshi = v.kinshi.map((k) => (typeof k === 'string' ? { food: k, sub: '' } : k));
-    if (v.suppName) d.supplements = [{ name: v.suppName, when: '' }];
-    const notes = [v.sideWord ? '前の施設: ' + v.sideWord : '', v.thickWord ? 'とろみの呼び方: ' + v.thickWord : '',
-      v.swWay && v.swWay.length ? v.swWay.join('・') : '', v.drugNg ? '服薬の禁忌: ' + v.drugNg : ''].filter(Boolean).join('　');
-    if (notes) d.notes = [d.notes, notes].filter(Boolean).join('　');
-    return d;
-  };
+  I.toDiet = (v, diet) => M.intakeToDiet(v, diet);
 
   // ---- 画面 ----
   App.registerScreen('intake', async function (params, root) {
@@ -182,7 +166,7 @@
         const got = collect();
         const rec = M.normalizeResident(await DB.get('residents', r.id));
         rec.intake = got;
-        const cur = M.dietAt(rec, { d: U.today(), m: M.activeMeals(m)[0].id }, m.meals);
+        const cur = M.intakeBase(rec, { d: U.today(), m: M.activeMeals(m)[0].id }, m.meals);
         const next = I.toDiet(got, cur);
         if (!await U.confirm('聞き取りの内容を食事情報に写します。今日から使う版として足します（前の版は履歴に残ります）。', { okLabel: '写す' })) return;
         rec.diet = (rec.diet || []).concat([{ id: U.uid('v'), from: { d: U.today(), m: M.activeMeals(m)[0].id },
