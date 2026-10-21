@@ -88,6 +88,39 @@
           dos.length ? dos.map((x) => h('span', { class: 'fc-item' }, x)) : h('span', { class: 'fc-none' }, 'なし'))));
   }
   Cards.card = card;
+
+  // 「禁止」欄が札に収まっているかを描いた後に測り、はみ出たら字を小さくする。それでも無理なら
+  // 後ろ（禁食の側）から隠して「ほか N 件」を赤で出す（黙って切れるのが一番危ない）。札が画面に載ってから呼ぶ
+  Cards.fitNots = function (scope) {
+    scope.querySelectorAll('.fcard').forEach((cardEl) => {
+      const not = cardEl.querySelector('.fc-not');
+      if (!not || not.classList.contains('empty')) return;
+      const items = Array.from(not.querySelectorAll('.fc-item'));
+      const over = () => {
+        const cb = cardEl.getBoundingClientRect(), nb = not.getBoundingClientRect();
+        const bottom = Math.min(cb.bottom, nb.bottom) + 0.5, right = Math.min(cb.right, nb.right) + 0.5;
+        return items.concat(Array.from(not.querySelectorAll('.fc-more'))).some((x) => {
+          if (x.style.display === 'none') return false;
+          const b = x.getBoundingClientRect();
+          return b.bottom > bottom || b.right > right;
+        });
+      };
+      for (const k of ['1', '0.85', '0.72', '0.6']) { not.style.setProperty('--nf', k); if (!over()) return; }
+      const more = h('span', { class: 'fc-more' });
+      not.appendChild(more);
+      for (let i = items.length - 1, n = 1; i >= 1; i--, n++) {
+        items[i].style.display = 'none';
+        more.textContent = 'ほか ' + n + ' 件';
+        if (!over()) break;
+      }
+    });
+  };
+  // scope が画面に載るのを待ってから測る（描画の関数は、画面に載る前の箱に描くため）
+  Cards.fitWhenShown = function (scope) {
+    let tries = 0;
+    const go = () => { if (scope.isConnected) Cards.fitNots(scope); else if (++tries < 200) setTimeout(go, 30); };
+    setTimeout(go, 0);
+  };
   window.Cards = Cards;
 
   // ---- 設定: 食札の中身 ----
@@ -118,6 +151,7 @@
       prev.innerHTML = '';
       prev.appendChild(h('div', { class: 'sub' }, '見本（' + lay.label + '）'));
       prev.appendChild(card(r, d, { d: U.today(), m: M.activeMeals(m)[0].id }, lay, true));
+      Cards.fitWhenShown(prev);
     }
     function draw() {
       box.innerHTML = '';
@@ -227,6 +261,7 @@
         h('div', { class: 'sheet-grid', style: 'grid-template-columns:repeat(' + lay.cols + ',' + lay.w + 'mm);gap:' + lay.gy + 'mm ' + lay.gx + 'mm;' },
           picked.slice(i, i + per).map((x) => card(x.r, x.diet, slot, lay, changed[x.r.id])))));
     }
+    Cards.fitWhenShown(root);
   });
 
   App.registerScreen('kinshi', async function (params, root) {

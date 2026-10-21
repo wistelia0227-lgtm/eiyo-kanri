@@ -104,7 +104,9 @@ table.edit td { padding: .2rem .3rem; }
 .fc-h { display: block; font-size: calc(2.4mm * var(--u)); color: #4b5563; font-weight: 700; }
 .fc-not .fc-h { color: #991b1b; }
 .fc-item { display: inline-block; font-size: calc(3.4mm * var(--u)); font-weight: 700; margin-right: 2mm; line-height: 1.25; }
-.fc-not .fc-item { color: #991b1b; }
+.fc-not .fc-item { color: #991b1b; font-size: calc(3.4mm * var(--u) * var(--nf, 1)); }
+/* 禁止欄に収まらなかった時（modules/cards.js の Cards.fitNots）。黙って切らずに残りの数を出す */
+.fc-more { display: inline-block; color: #dc2626; font-weight: 700; font-size: calc(3mm * var(--u)); line-height: 1.25; }
 .fc-not .fc-item.alg { text-decoration: underline; }
 .fc-do .fc-item { font-weight: 400; }
 .fc-none { font-size: calc(2.6mm * var(--u)); color: #9ca3af; }

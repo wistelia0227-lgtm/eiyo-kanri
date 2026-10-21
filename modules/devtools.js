@@ -1029,6 +1029,41 @@
       ok('検食簿の文例が入っている', ph.length >= 5, ph.length);
     }
 
+    // 食札の「禁止」欄: 多くてもはみ出して黙って切れない（字を小さくし、それでも無理なら「ほか N 件」を赤で）
+    {
+      const slotC = { d: today, m: 'l' };
+      const rowsC = M.census(await DB.residents(), slotC, m2).rows.filter((x) => x.diet);
+      const tgt = rowsC[0].r, keep = JSON.parse(JSON.stringify(await DB.get('residents', tgt.id)));
+      const ten = ['鶏肉→白身魚', '牛肉→豚肉', 'こんにゃく→はんぺん', 'もち→やわらかいおかゆ', '刺身→加熱した魚', '海藻→青菜', 'ナッツ類→なし', 'いか→白身魚', 'たこ→白身魚', 'きのこ→根菜'];
+      for (const kin of [ten, ten.concat(ten.map((s) => '生の' + s), ten.map((s) => '揚げた' + s))]) {
+      const many = Object.assign(JSON.parse(JSON.stringify(M.versionAt(tgt, slotC, m2.meals).data)), {
+        allergy: ['えび', 'かに', '小麦', 'そば', '卵', '乳'],
+        kinshi: kin.map((s) => ({ food: s.split('→')[0], sub: s.split('→')[1] })) });
+      tgt.diet.push({ id: 'v_fit' + kin.length, from: { d: M.addDays(today, -1), m: 'b' }, data: many, recordedAt: Date.now() });
+      await DB.put('residents', tgt);
+      const boxC = h('div'); document.body.appendChild(boxC);
+      await App.screens.cards([today, 'l'], boxC);
+      await new Promise((ok2) => setTimeout(ok2, 400));
+      const cardEl = Array.from(boxC.querySelectorAll('.fcard')).find((c) => c.querySelector('.fc-name').textContent.indexOf(tgt.name) >= 0);
+      const not = cardEl && cardEl.querySelector('.fc-not');
+      const cb = cardEl.getBoundingClientRect(), nb = not.getBoundingClientRect();
+      const shown = Array.from(not.querySelectorAll('.fc-item')).filter((x) => getComputedStyle(x).display !== 'none');
+      const cut = shown.filter((x) => { const b = x.getBoundingClientRect(); return b.bottom > Math.min(cb.bottom, nb.bottom) + 1 || b.right > Math.min(cb.right, nb.right) + 1; });
+      const hiddenN = not.querySelectorAll('.fc-item').length - shown.length;
+      const more = not.querySelector('.fc-more');
+      const tag = '（禁食 ' + kin.length + ' 件）';
+      ok('食札の禁止欄' + tag + ': 見えている品は全部、札の中に収まっている', cut.length === 0, cut.map((x) => x.textContent));
+      ok('食札の禁止欄' + tag + ': 隠した品があれば「ほか N 件」が赤で出る', hiddenN === 0 ? !more : (!!more && more.textContent === 'ほか ' + hiddenN + ' 件' && getComputedStyle(more).color === 'rgb(220, 38, 38)'),
+        [hiddenN, more && more.textContent]);
+      if (kin.length > 10) ok('食札の禁止欄' + tag + ': 収まらない量なら隠して数を出す', hiddenN > 0 && !!more, hiddenN);
+      ok('食札の禁止欄' + tag + ': アレルギーは先に残る（隠すのは後ろの禁食から）', shown.filter((x) => x.classList.contains('alg')).length === 6, shown.length);
+      const other = Array.from(boxC.querySelectorAll('.fcard')).find((c) => c !== cardEl && !c.querySelector('.fc-not.empty'));
+      ok('食札の禁止欄' + tag + ': 少ない人は字の大きさがそのまま', !other || !other.querySelector('.fc-more') && (other.querySelector('.fc-not').style.getPropertyValue('--nf') || '1') === '1');
+      boxC.remove();
+      }
+      await DB.putRaw('residents', [keep]);
+    }
+
     // 全画面が例外なく描ける
     for (const name of Object.keys(App.screens)) {
       const box = h('div'); let err = null;
