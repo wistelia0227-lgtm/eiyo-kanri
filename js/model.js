@@ -94,6 +94,42 @@
     const d = M.normalizeDiet(v.data);
     return Object.assign({}, d, d.byMeal[slot.m] || {});
   };
+  // 食事を変更する時に、元の内容にする版 = 「いつから」の時点で有効な版（先の予定の版ではない）
+  M.editBase = function (r, slot, meals) { return M.versionAt(r, slot, meals); };
+  // 「いつから」より後に始まる予定の版（取り消していないもの）。早い順
+  M.laterVersions = function (r, slot, meals) {
+    const k = M.slotKey(meals, slot);
+    return r.diet.filter((v) => !v.cancelledAt && fromKey(meals, v.from) > k)
+      .sort((a, b) => fromKey(meals, a.from) - fromKey(meals, b.from) || (a.recordedAt || 0) - (b.recordedAt || 0));
+  };
+  // 今回の変更で「足した」アレルギー・禁食（外した物は数えない＝消える方向は運ばない）
+  M.restrictionAdds = function (before, after) {
+    const a = M.normalizeDiet(before), b = M.normalizeDiet(after);
+    return { allergy: b.allergy.filter((x) => a.allergy.indexOf(x) < 0),
+      kinshi: b.kinshi.filter((k) => !a.kinshi.some((o) => o.food === k.food)) };
+  };
+  // 足したアレルギー・禁食を、後の予定の版にも入れる。予定の版は書き換えず、取り消しの印を付けて
+  // 同じ「いつから」で中身を足した版に置き換える（版は消さない・上書きしない）。置き換えた数を返す
+  M.applyToLater = function (r, later, add, opt) {
+    opt = opt || {};
+    let count = 0;
+    (later || []).forEach((v) => {
+      const d = M.normalizeDiet(JSON.parse(JSON.stringify(v.data)));
+      const al = add.allergy.filter((x) => d.allergy.indexOf(x) < 0);
+      const ks = add.kinshi.filter((k) => !d.kinshi.some((o) => o.food === k.food));
+      if (!al.length && !ks.length) return;
+      d.allergy = d.allergy.concat(al);
+      d.kinshi = d.kinshi.concat(ks.map((k) => Object.assign({}, k)));
+      const at = opt.at || Date.now();
+      const nv = Object.assign({}, v, { id: (opt.uid ? opt.uid('v') : v.id + '_' + at), data: d, replaces: v.id,
+        reason: [v.reason, 'アレルギー・禁食の追加（' + al.concat(ks.map((k) => k.food)).join('、') + '）を反映'].filter(Boolean).join('／'),
+        by: opt.by || v.by, recordedAt: at });
+      v.cancelledAt = at; v.cancelledBy = opt.by || '';
+      r.diet.push(nv);
+      count++;
+    });
+    return count;
+  };
   M.prevVersion = function (r, v, meals) {
     const vk = fromKey(meals, v.from);
     return r.diet.filter((x) => x !== v && !x.cancelledAt &&

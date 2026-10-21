@@ -162,7 +162,7 @@
   R.editDiet = function (r, fromSlot) {
     const m = ms(), meals = M.activeMeals(m);
     const slot0 = fromSlot || V.nextSlot();
-    const base = M.versionAt(r, { d: '9999-12-31', m: meals[0].id }, m.meals);
+    const base = M.editBase(r, slot0, m.meals);
     const d = M.normalizeDiet(base ? JSON.parse(JSON.stringify(base.data)) : null);
     const first = !base;
 
@@ -215,6 +215,11 @@
     const save = async () => {
       const a = from.get();
       if (!a) { U.toast('いつから変えるかを入れてください', true); return; }
+      // 「いつから」を動かして、元にする版が開いた時と変わったら、その版で開き直す（別の版を元に足さない）
+      if (M.editBase(r, a, m.meals) !== base) {
+        if (await U.confirm('「いつから」の時点で使われている食事情報が、この画面を開いた時と違います。その時点の内容で開き直します（入力した所は消えます）。', { okLabel: '開き直す' })) { close(); R.editDiet(r, a); }
+        return;
+      }
       const data = M.emptyDiet();
       ['shokushu', 'staple', 'side', 'soupThick', 'drinkThick', 'portion', 'assist'].forEach((k) => { data[k] = f[k].value; });
       data.stapleG = parseFloat(f.stapleG.value) || null; data.place = f.place.value.trim(); data.notes = f.notes.value.trim();
@@ -226,9 +231,21 @@
       });
       if (base && !M.diffDiet(base.data, data, m).length) { U.toast('前と同じ内容です。変わった所を直してから保存してください', true); return; }
       if (!first && !source.value.trim()) { U.toast('誰の指示・依頼かを入れてください', true); return; }
+      // 後に予定の版があれば、足したアレルギー・禁食をそちらにも入れるか聞く（既定は入れる＝安全側）
+      const later = M.laterVersions(r, a, m.meals), add = M.restrictionAdds(base ? base.data : null, data);
+      let carry = false;
+      if (later.length && (add.allergy.length || add.kinshi.length)) {
+        carry = await U.confirm(h('div', null,
+          h('div', { class: 'warn-text' }, h('b', null, '後に予定の食事情報があります: '), later.map((v) => V.slotText(v.from, 'から')).join('、')),
+          h('div', null, '今回足した ', h('b', null, add.allergy.map((x) => 'アレルギー ' + x).concat(add.kinshi.map((k) => '禁食 ' + k.food)).join('、')),
+            ' を、予定の食事情報にも入れますか？'),
+          h('div', { class: 'sub' }, '入れないと、予定の日からはアレルギー・禁食が今回の前の内容に戻ります。食種・形態などほかの変更は予定の版には入りません。')),
+        { okLabel: '予定にも入れる（おすすめ）', cancelLabel: '入れない' });
+      }
       V.setRecorder(by.value.trim());
       r.diet.push({ id: U.uid('v'), from: a, data: data, source: source.value.trim(), reason: reason.value.trim(), doctor: doctor.value,
         riskExplained: risk.checked, by: by.value.trim(), recordedAt: Date.now() });
+      if (carry) M.applyToLater(r, later, add, { by: by.value.trim(), uid: U.uid });
       await DB.put('residents', r); close(); U.toast('保存しました'); App.refresh();
     };
     close = U.modal(h('div', null, h('h2', null, V.sama(r.name) + '　' + (first ? '食事情報を登録' : '食事を変更する')),
