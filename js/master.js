@@ -8,8 +8,9 @@
       kanrisha: '', setchiName: '', setchiAddr: '' },
     profile: null, // 事業所プロファイル（js/profile.js）。null なら初回の登録案内を出す
     meals: [
-      { id: 'b', label: '朝', on: true }, { id: 'l', label: '昼', on: true },
-      { id: 's', label: 'おやつ', on: false }, { id: 'd', label: '夕', on: true }],
+      // until = 区切りの時刻（この時になったら、日付・食事の初期値を次の食事へ進める。最後の食事の後は翌朝）
+      { id: 'b', label: '朝', on: true, until: 7 }, { id: 'l', label: '昼', on: true, until: 11 },
+      { id: 's', label: 'おやつ', on: false, until: 14 }, { id: 'd', label: '夕', on: true, until: 17 }],
     categories: [ // stayIn = 泊まる人（ミールラウンドの対象）／ncm = 栄養ケア・マネジメントの対象
       { id: 'long', label: '入所', stayIn: true, ncm: true },
       { id: 'short', label: 'ショート', stayIn: true, ncm: false },

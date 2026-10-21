@@ -71,7 +71,9 @@
     const m = ms();
     return h('div', null,
       h('div', { class: 'sub' }, '施設の呼び方に合わせて直せます。呼び方を変えても、登録済みの利用者の記録はそのまま付いてきます。'),
-      listEditor('meals', '食事の区分', [{ key: 'on', label: '使う', type: 'check', get: (it) => it.on !== false }], 'おやつの数も数える時は「使う」に印を付けます。'),
+      listEditor('meals', '食事の区分', [{ key: 'on', label: '使う', type: 'check', get: (it) => it.on !== false },
+        { key: 'until', label: '区切り（時）', type: 'number', get: (it) => it.until || '', set: (it, v) => { it.until = v > 0 ? v : null; } }],
+        'おやつの数も数える時は「使う」に印を付けます。区切り＝この時刻になったら、画面の日付・食事の初期値を次の食事に進めます（最後の食事の区切りを過ぎると翌朝。既定は 朝 7・昼 11・おやつ 14・夕 17 時）。'),
       listEditor('categories', '利用者の区分', [
         { key: 'stayIn', label: '泊まる', type: 'check', get: (it) => it.stayIn !== false },
         { key: 'ncm', label: '栄養ケアの対象', type: 'check' }],

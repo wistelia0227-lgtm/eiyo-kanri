@@ -64,5 +64,22 @@ const ver = (d, m, data, at) => ({ id: uid('v'), from: { d: d, m: m }, data: Obj
   ok('元の版の中身は書き換えない', v1.data.allergy.join() === 'えび' && v1.data.kinshi.length === 1);
 })();
 
+// ---- 6. 次の食事の枠（17 時以降は翌朝）。食事の印を変えた施設でも効く ----
+(function () {
+  const std = meals.filter((x) => x.on !== false);
+  const at = (ms, h) => { const s = M.nextSlotAt(ms, '2026-10-22', h); return s.d + '/' + s.m; };
+  ok('既定: 8 時は昼', at(std, 8) === '2026-10-22/l');
+  ok('既定: 18 時は翌朝', at(std, 18) === '2026-10-23/b');
+  // 食事を作り直した施設（印が b/l/d ではない）
+  const own = Master.merge({ meals: [{ id: 'm1', label: '朝食' }, { id: 'm2', label: '昼食' }, { id: 'm3', label: '夕食' }] }).meals;
+  ok('印を変えた施設: 18 時は翌朝', at(own, 18) === '2026-10-23/m1', at(own, 18));
+  ok('印を変えた施設: 12 時は夕', at(own, 12) === '2026-10-22/m3', at(own, 12));
+  // 区切りを食事の設定に持たせて、施設が決められる
+  const set = [{ id: 'm1', label: '朝食', until: 8 }, { id: 'm2', label: '昼食', until: 13 }, { id: 'm3', label: '夕食', until: 19 }];
+  ok('区切りの設定どおり: 18 時はまだ夕', at(set, 18) === '2026-10-22/m3', at(set, 18));
+  ok('区切りの設定どおり: 19 時は翌朝', at(set, 19) === '2026-10-23/m1', at(set, 19));
+  ok('既定の食事には区切りが入っている', Master.merge({ meals: [{ id: 'd', label: '夕' }] }).meals[0].until === 17);
+})();
+
 console.log('\n' + (n - bad) + '/' + n + ' 通過' + (bad ? '  ★ 失敗 ' + bad + ' 件' : ''));
 process.exit(bad ? 1 : 0);

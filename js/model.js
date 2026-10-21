@@ -31,6 +31,20 @@
     return fromKey(meals, rec.from) <= k && k <= toKey(meals, rec.to);
   };
   M.activeMeals = function (masters) { return masters.meals.filter((x) => x.on !== false); };
+  // 今いちばん近い「次の食事」の枠。meals = 使う食事、hour = 今の時（0〜23）
+  // 区切り = その時刻になったら次の食事へ進む（食事の設定の until）。無ければ既定の印（b/l/s/d）の値、
+  // 印も変えてある時は並び順で 朝 7 時〜最後 17 時 を割る（最後の食事の後は翌日の最初の食事）
+  M.MEAL_CUT = { b: 7, l: 11, s: 14, d: 17 };
+  M.mealCut = function (meals, i) {
+    const x = meals[i];
+    if (x && typeof x.until === 'number' && x.until > 0) return x.until;
+    if (x && M.MEAL_CUT[x.id] != null) return M.MEAL_CUT[x.id];
+    return meals.length < 2 ? 17 : Math.round(7 + 10 * i / (meals.length - 1));
+  };
+  M.nextSlotAt = function (meals, today, hour) {
+    const next = meals.find((x, i) => hour < M.mealCut(meals, i));
+    return next ? { d: today, m: next.id } : { d: M.addDays(today, 1), m: meals[0].id };
+  };
 
   // ---- 利用者（足りない項目は既定値で補う＝古いデータも壊さない） ----
   M.newResident = function (name, uid) {

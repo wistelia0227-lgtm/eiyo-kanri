@@ -56,10 +56,7 @@
 
   // 今いちばん近い「次の食事」の枠
   V.nextSlot = function () {
-    const meals = M.activeMeals(ms()), hr = new Date().getHours();
-    const cut = { b: 7, l: 11, s: 14, d: 17 };
-    const next = meals.find((x) => hr < (cut[x.id] == null ? 24 : cut[x.id]));
-    return next ? { d: U.today(), m: next.id } : { d: M.addDays(U.today(), 1), m: meals[0].id };
+    return M.nextSlotAt(M.activeMeals(ms()), U.today(), new Date().getHours());
   };
   // 画面上部の「日付を前後に動かす」部品
   V.dateBar = function (date, onchange) {
