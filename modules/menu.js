@@ -275,7 +275,8 @@
       U.select(m.shokushu, sId, { noEmpty: true, onchange: (e) => { shokushu = e.target.value; App.refresh(); } }),
       h('span', { class: 'gap' }),
       h('button', { class: 'btn', onclick: () => Menu.expandDialog(start, span, sId) }, '他の食種へ写す'),
-      h('a', { class: 'btn', href: '#/kondate/' + start }, '献立表を刷る')));
+      h('a', { class: 'btn', href: '#/kondate/' + start }, '献立表を刷る'),
+      window.AllergySheetScreen ? h('a', { class: 'btn', href: '#/allergysheet' }, '🖨 アレルギー表') : null));
 
     // 目標量
     root.appendChild(h('div', { class: 'card' + (tgt ? '' : ' warn') },

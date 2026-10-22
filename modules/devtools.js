@@ -1065,6 +1065,30 @@
       await DB.putRaw('residents', [keep]);
     }
 
+    // 献立のアレルギー表（厨房向けの 1 枚）
+    {
+      const boxM = h('div'); await App.screens.menu([today], boxM);
+      ok('アレルギー表: 献立の画面にボタンがある', Array.from(boxM.querySelectorAll('a')).some((a) => /アレルギー表/.test(a.textContent) && /#\/allergysheet/.test(a.getAttribute('href'))));
+      const keepM = JSON.parse(JSON.stringify(await window.Menu.get(today)));
+      const recM = await window.Menu.get(today), sId0 = m2.shokushu[0].id, key = 'l/' + sId0;
+      recM.cells[key] = (recM.cells[key] || []).concat([{ name: '手書きの小鉢' }]);
+      await DB.put('menus', recM);
+      const boxA = h('div'); await App.screens.allergysheet([today, 'l'], boxA);
+      const sheetA = boxA.querySelector('.as-sheet');
+      ok('アレルギー表: A4 の 1 枚が描ける', !!sheetA && /アレルギー・禁食 確認表/.test(sheetA.textContent));
+      ok('アレルギー表: 料理の行がある', boxA.querySelectorAll('.as-table tbody tr').length > 0);
+      const unk = boxA.querySelector('.as-unknown');
+      ok('アレルギー表: 印も材料も無い料理は「確認できない料理」に目立つ形で出る', !!unk && /手書きの小鉢/.test(unk.textContent));
+      const dmA = {};
+      (await DB.getAll('dishes')).forEach((d) => { dmA[d.id] = Object.assign({ items: [], allergy: [] }, d); });
+      const expect = window.AllergySheet.build(await DB.residents(), dmA, recM, { d: today, m: 'l' }, m2);
+      const nHits = expect.rows.reduce((a, x) => a + x.hits.length, 0);
+      ok('アレルギー表: 当たりの数が中身の計算と同じ', boxA.querySelectorAll('.as-alg, .as-kin').length === nHits, [boxA.querySelectorAll('.as-alg, .as-kin').length, nHits]);
+      ok('アレルギー表: 代わりの物が無い当たりには手書きの代替欄', Array.from(boxA.querySelectorAll('.as-table td')).filter((td) => /^代替: /.test(td.textContent)).length
+        === expect.rows.reduce((a, x) => a + x.hits.filter((y) => !y.sub).length, 0));
+      await DB.putRaw('menus', [keepM]);
+    }
+
     // 全画面が例外なく描ける
     for (const name of Object.keys(App.screens)) {
       const box = h('div'); let err = null;

@@ -306,3 +306,20 @@ table.staff .blankrow { display: inline-block; min-height: 1.4em; }
 }
 table.check th.num { width: 2em; text-align: center; }
 table.check td:nth-child(2) { line-height: 1.45; }
+
+/* 献立のアレルギー表（modules/allergysheet.js）。A4 縦。長い時は次の紙へ流れる */
+.as-sheet { width: 190mm; background: #fff; color: #111827; padding: 10mm; margin: .8rem 0; box-shadow: 0 0 0 1px var(--line); font-size: 10.5pt; }
+.as-head { display: flex; justify-content: space-between; align-items: baseline; border-bottom: 2px solid #111827; margin-bottom: 3mm; }
+.as-head h1 { font-size: 15pt; margin: 0; }
+.as-table { width: 100%; border-collapse: collapse; margin-bottom: 3mm; }
+.as-table th, .as-table td { border: 1px solid #6b7280; padding: 1.2mm 2mm; text-align: left; vertical-align: top; }
+.as-table th { background: #f3f4f6; }
+.as-dish { font-weight: 700; }
+.as-alg { color: #991b1b; font-weight: 700; } .as-kin { color: #92400e; font-weight: 700; }
+.as-foods { font-weight: 400; font-size: 8.5pt; color: #4b5563; }
+.as-none td { color: #6b7280; }
+.as-unknown { border: 2px solid #dc2626; background: #fef2f2; color: #991b1b; padding: 2mm 3mm; margin-bottom: 3mm; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+.as-warn { border: 1px solid #d97706; background: #fffbeb; padding: 2mm 3mm; margin-bottom: 3mm; }
+.as-ok { margin-bottom: 3mm; } .as-note { font-size: 8.5pt; color: #4b5563; margin-bottom: 2mm; }
+.as-sign { border-collapse: collapse; margin-left: auto; } .as-sign th, .as-sign td { border: 1px solid #6b7280; padding: 1mm 2mm; } .as-sign td { width: 22mm; height: 12mm; }
+@media print { .as-sheet { width: auto; margin: 0; padding: 0; box-shadow: none; } }
