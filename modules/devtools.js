@@ -772,6 +772,32 @@
       ok('U.xlsx がある', typeof U.xlsx === 'function');
     }
 
+    // 画面に出ている表をそのまま Excel にする（js/util.js の U.tablesOf / U.xlsxScreen）
+    {
+      ok('U.tablesOf と U.xlsxScreen が関数であること', typeof U.tablesOf === 'function' && typeof U.xlsxScreen === 'function');
+      const box = h('div', null,
+        h('h2', null, '試しの表'),
+        h('table', null, h('thead', null, h('tr', null, h('th', null, '名前'), h('th', null, '数'))),
+          h('tbody', null, h('tr', null, h('td', null, 'あ'), h('td', null, '1')))));
+      const tabs = U.tablesOf(box);
+      ok('自分で作った箱から表を拾えること', tabs.length === 1 && tabs[0].name === '試しの表' && JSON.stringify(tabs[0].rows) === '[["名前","数"],["あ","1"]]', tabs[0]);
+      const boxNP = h('div', null, h('table', { class: 'no-print' }, h('tr', null, h('td', null, 'x'))));
+      ok('no-print の表は拾わないこと', U.tablesOf(boxNP).length === 0);
+      const boxNP2 = h('div', { class: 'no-print' }, h('table', null, h('tr', null, h('td', null, 'x'))));
+      ok('no-print の中にある表も拾わないこと', U.tablesOf(boxNP2).length === 0);
+      // U.tablesOf は「入れ物」を受け取る。table そのものを渡すと querySelectorAll は自分を拾わない
+      const boxInp = h('div', null, h('table', null, h('tr', null, h('td', null, h('input', { value: '入れた値' }), h('span', { class: 'no-print' }, '消す')))));
+      ok('セルの中の入力欄の値を拾い、no-print は無視すること', U.tablesOf(boxInp)[0].rows[0][0] === '入れた値');
+      const boxCol = h('div', null, h('table', null, h('tr', null, h('th', { colspan: 2 }, '見出し'))));
+      ok('colspan の分だけ列を使うこと', JSON.stringify(U.tablesOf(boxCol)[0].rows[0]) === '["見出し",""]');
+      const boxNoName = h('div', null, h('table', null, h('tr', null, h('td', null, 'x'))));
+      ok('見出しが無い表には名前が付くこと', U.tablesOf(boxNoName)[0].name.indexOf('表') === 0);
+      const b2 = h('div'); await App.screens.census([today], b2);
+      ok('実際の画面から拾えること', U.tablesOf(b2).length >= 1);
+      const bDup = window.Xlsx.build([{ name: '同名', rows: [['a']] }, { name: '同名', rows: [['b']] }]);
+      ok('同じ名前の表が 2 つあっても Excel が作れること', bDup instanceof Uint8Array && bDup[0] === 0x50 && bDup[1] === 0x4B);
+    }
+
     // 選択メニューと嗜好調査
     {
       const Cx = window.Choice, Mx = window.Menu;

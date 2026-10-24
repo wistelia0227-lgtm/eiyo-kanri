@@ -200,6 +200,78 @@
     setTimeout(() => URL.revokeObjectURL(url), 3000);
   };
 
+  // 市販の給食管理ソフトは帳票を全部 Excel で出せる。施設ごとの様式に直したり、
+  // 監査・実地指導で求められた形に組み直したりするため。
+  // この画面ごとに書き出しを作ると数が多いので、画面に出ている表をそのまま拾う形にした。
+  U.tablesOf = function (root) {
+    const results = [];
+    const targets = (root || document).querySelectorAll('h1, h2, h3, .paper-sec, .paper-title, table');
+    let lastTitle = '';
+    let tableCount = 0;
+
+    Array.from(targets).forEach((el) => {
+      if (el.tagName !== 'TABLE') {
+        if (!el.closest('.no-print')) lastTitle = el.textContent.trim().replace(/\s+/g, ' ');
+        return;
+      }
+      if (el.closest('.no-print')) return;
+
+      const rows = [];
+      Array.from(el.querySelectorAll('tr')).forEach((tr) => {
+        if (tr.classList.contains('no-print')) return;
+        const row = [];
+        Array.from(tr.cells).forEach((td) => {
+          if (td.classList.contains('no-print')) return;
+          let val = '';
+          // このアプリは「紙に出る表記」を print-only で持っている。衛生の点検表は ○ と × の
+          // ボタンが両方セルに入っているので、そのまま拾うと「○×」になる。紙と同じ中身にする。
+          const paper = td.querySelector('.print-only');
+          const input = paper ? null : td.querySelector('input, textarea, select');
+          if (paper) {
+            val = paper.textContent.trim().replace(/\s+/g, ' ');
+          } else if (input) {
+            if (input.tagName === 'SELECT') {
+              val = (input.options[input.selectedIndex] || {}).textContent || '';
+            } else if (input.type === 'checkbox') {
+              val = input.checked ? '○' : '';
+            } else {
+              val = input.value;
+            }
+          } else {
+            const clone = td.cloneNode(true);
+            // segrow は画面で押すボタンの並び。紙には出ないので数えない
+            Array.from(clone.querySelectorAll('.no-print, .segrow')).forEach((n) => n.remove());
+            val = clone.textContent.trim().replace(/\s+/g, ' ');
+          }
+          row.push(val);
+          const span = parseInt(td.getAttribute('colspan') || '1', 10);
+          for (let i = 1; i < span; i++) row.push('');
+        });
+        if (row.length) rows.push(row);
+      });
+
+      if (rows.length) {
+        tableCount++;
+        results.push({ name: lastTitle || ('表' + tableCount), rows: rows });
+      }
+    });
+    return results;
+  };
+
+  U.xlsxScreen = function (filename, root, head) {
+    const sheets = U.tablesOf(root);
+    if (!sheets.length) {
+      U.toast('この画面には表がありません', true);
+      return;
+    }
+    if (head) {
+      sheets.forEach((s) => {
+        s.rows.unshift([head], []);
+      });
+    }
+    U.xlsx(filename, sheets);
+  };
+
   // ファイルとして保存 / 読み込み
   U.download = function (filename, text, mime) {
     const url = URL.createObjectURL(new Blob([text], { type: mime || 'application/json' }));

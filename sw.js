@@ -13,14 +13,14 @@ const FILES = [
   './js/util.js', './js/model.js', './js/allergy_sheet.js', './js/sync.js', './js/db.js', './js/profile.js',
   './js/foods_data.js', './js/nutri.js', './js/foodgroup.js', './js/glim.js', './js/amounts.js', './js/xlsx.js', './js/hygiene_forms.js', './js/houkoku_forms.js', './js/bulk.js',
   './js/ncm.js', './js/life_spec.js', './js/life.js', './js/phrases.js',
-  './js/dishes_seed.js', './js/master.js', './js/view.js', './js/app.js',
+  './js/dishes_seed.js', './js/master.js', './js/help.js', './js/view.js', './js/app.js',
   './modules/board.js', './modules/facility.js', './modules/residents.js',
   './modules/ncm.js', './modules/careplan.js', './modules/life.js', './modules/census.js', './modules/home.js',
   './modules/cards.js', './modules/weights.js', './modules/glim.js', './modules/rounds.js',
   './modules/foods.js', './modules/dishes.js', './modules/menu.js', './modules/allergysheet.js',
   './modules/jisshi.js', './modules/stock.js', './modules/choice.js', './modules/poster.js', './modules/hygiene.js', './modules/bulkui.js', './modules/intake.js', './modules/needs.js', './modules/kondate.js', './modules/report.js', './modules/houkoku.js', './modules/journal.js',
   './modules/seed.js', './modules/forms.js', './modules/measures.js', './modules/supplements.js',
-  './modules/links.js', './modules/share.js', './modules/settings.js', './modules/devtools.js',
+  './modules/keys.js', './modules/links.js', './modules/share.js', './modules/settings.js', './modules/devtools.js',
   './manifest.webmanifest', './icons/icon-192.png', './icons/icon-512.png'
 ];
 const CACHE_FIRST = /(foods_data[.]js|foods_amino[.]js|foods_fat[.]js|foods_carb[.]js|dishes_seed[.]js|life_spec[.]js|icons[/])/;
