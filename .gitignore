@@ -1,2 +1,3 @@
 tools/update_state.json
 tools/update_report.txt
+*.bak_*
