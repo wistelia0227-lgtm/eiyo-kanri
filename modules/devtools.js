@@ -1238,6 +1238,39 @@
       ok('空のデータでも画面「' + name + '」が描ける', !err, err);
     }
 
+    // 壊れた URL（#/census/r1 のような取り違え、実在しない日）でも落ちないこと。
+    // 日付の所に別の値が来ると Invalid time value で 5 画面が死んでいた（U.dateOr / U.monthOr で受ける）
+    ok('日付かどうかを見分けられる',
+      U.isDate('2026-11-01') && !U.isDate('2026-02-30') && !U.isDate('r1') && !U.isDate(''),
+      [U.isDate('2026-02-30'), U.isDate('r1')]);
+    ok('日付でなければ今日に落とす', U.dateOr('r1') === U.today() && U.dateOr('2026-11-01') === '2026-11-01');
+    ok('月かどうかを見分けられる', U.isMonth('2026-11') && !U.isMonth('2026-13') && !U.isMonth('2026-11-01'));
+    ok('月でなければ今月に落とす', U.monthOr('xyz') === U.today().slice(0, 7) && U.monthOr('2026-03') === '2026-03');
+    {
+      const bads = [['r1'], ['2026-99-99'], ['abc', 'xyz']];
+      const broke = [];
+      for (const name of Object.keys(App.screens)) {
+        for (const p of bads) {
+          try { await App.screens[name](p, h('div')); } catch (e) { broke.push(name + '(' + p + '): ' + e.message); }
+        }
+      }
+      ok('壊れた URL でも全画面が落ちない', broke.length === 0, broke.slice(0, 5));
+    }
+
+    // 画面内ヘルプ（js/help.js）。画面を足したらヘルプも足す、を試験で縛る
+    if (window.Help) {
+      const scr = Object.keys(App.screens);
+      const noHelp = scr.filter((n) => !window.Help.of(n));
+      ok('全部の画面にヘルプがある', noHelp.length === 0, noHelp);
+      const extra = window.Help.names().filter((n) => scr.indexOf(n) < 0);
+      ok('無い画面のヘルプが残っていない', extra.length === 0, extra);
+      const half = window.Help.names().filter((n) => {
+        const t = window.Help.of(n);
+        return !t.title || !t.what || !t.how || !t.flow;
+      });
+      ok('ヘルプは 表題・何か・どう使うか・流れ の 4 つがそろっている', half.length === 0, half);
+    }
+
     const bad = results.filter((r) => !r.ok).length;
     const root = document.getElementById('root');
     root.innerHTML = '';

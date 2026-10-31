@@ -28,7 +28,7 @@
   };
 
   App.registerScreen('supp', async function (params, root) {
-    const date = params[0] || U.today();
+    const date = U.dateOr(params[0]);
     const data = await S.collect(date);
     root.appendChild(h('header', { class: 'topbar' }, h('h1', null, '補食・栄養補助食品　' + U.fmtDate(date, true)),
       h('div', { class: 'no-print' }, h('button', { class: 'btn', onclick: () => window.print() }, '印刷'), ' ',
@@ -57,7 +57,7 @@
 
   // ラベル（名刺サイズの面付けを使い回す）
   App.registerScreen('supplabel', async function (params, root) {
-    const date = params[0] || U.today();
+    const date = U.dateOr(params[0]);
     const m = ms();
     const data = await S.collect(date);
     const lay = M.item(m.cardLayouts, 'meishi10') || m.cardLayouts[0];

@@ -272,7 +272,7 @@
   };
 
   App.registerScreen('glim', async function (params, root) {
-    const date = (params && params[0]) || U.today();
+    const date = U.dateOr(params && params[0]);
     const m = ms() || {};
 
     const residents = (await DB.residents()) || [];

@@ -34,8 +34,8 @@
 
   App.registerScreen('life', async function (params, root) {
     const m = ms(), today = U.today();
-    const to = params[1] || today;
-    const from = params[0] || M.addDays(M.addMonths(to, -1), 1);
+    const to = U.dateOr(params[1], today);
+    const from = U.dateOr(params[0], M.addDays(M.addMonths(to, -1), 1));
     root.appendChild(h('header', { class: 'topbar' }, h('h1', null, 'LIFE へ出す'),
       h('span', { class: 'sub' }, '仕様 ' + (L.loaded() ? L.VERSION() + '版' : '未読み込み'))));
     if (!L.loaded()) { root.appendChild(h('div', { class: 'card bad' }, '項目定義（js/life_spec.js）が読み込まれていません。')); return; }

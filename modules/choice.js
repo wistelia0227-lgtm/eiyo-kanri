@@ -35,7 +35,7 @@
 
   // ---- 選択メニューの画面 ----
   App.registerScreen('choice', async function (params, root) {
-    const date = params[0] || U.today();
+    const date = U.dateOr(params[0]);
     const m = ms(), meals = M.activeMeals(m);
     const rec = await Menu.get(date);
     const daily = await C.picksOf(date);
@@ -190,7 +190,7 @@
   ];
 
   App.registerScreen('kikou', async function (params, root) {
-    const date = params[0] || U.today();
+    const date = U.dateOr(params[0]);
     const m = ms(), meals = M.activeMeals(m);
     const daily = (await DB.get('daily', date)) || { date: date, extra: {} };
     daily.kikou = daily.kikou || {};

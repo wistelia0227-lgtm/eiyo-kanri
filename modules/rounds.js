@@ -30,7 +30,7 @@
   }
 
   App.registerScreen('rounds', async function (params, root) {
-    const m = ms(), today = U.today(), month = params[0] || today.slice(0, 7);
+    const m = ms(), today = U.today(), month = U.monthOr(params[0], today.slice(0, 7));
     const first = month + '-01', last = M.addDays(M.addMonths(first, 1), -1);
     const days = []; for (let d = first; d <= last; d = M.addDays(d, 1)) days.push(d);
     const stayIn = V.stayInCats();

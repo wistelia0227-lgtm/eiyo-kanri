@@ -26,7 +26,7 @@
 
   App.registerScreen('hygiene', async function (params, root) {
     if (params[0] && HF.form(params[0])) form = params[0];
-    const date = params[1] || U.today();
+    const date = U.dateOr(params[1]);
     const daily = await HY.get(date);
     const f = HF.form(form);
     const rec = HY.recOf(daily, form);
@@ -176,7 +176,7 @@
 
   // ---- 1 か月ぶんの一覧（つけ忘れを見つける）----
   App.registerScreen('hygienelist', async function (params, root) {
-    const ym = params[0] || U.today().slice(0, 7);
+    const ym = U.dateOr(params[0]).slice(0, 7);
     const days = window.Report ? window.Report.daysOf(ym) : [];
     const recs = {};
     (await DB.getAll('daily')).forEach((x) => { if (x.date && x.date.slice(0, 7) === ym) recs[x.date] = x.hygiene || {}; });

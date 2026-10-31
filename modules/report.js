@@ -137,7 +137,7 @@
   App.registerScreen('report', async function (params, root) {
     const m = ms();
     if (params[0] && R.TABS.some((t) => t.id === params[0])) tab = params[0];
-    const ym = month || (params[1] || R.monthNow());
+    const ym = U.monthOr(month || params[1], R.monthNow());
     month = ym;
     const sId = shokushu || (m.shokushu[0] && m.shokushu[0].id);
     if (!sId) { root.appendChild(h('div', { class: 'empty' }, '食種がありません。設定 → 呼び方（マスタ）で足してください。')); return; }

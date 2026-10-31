@@ -29,8 +29,8 @@
   function barOf(box) {
     const bar = box.querySelector('header.topbar');
     if (!bar) return box.querySelector('.toolrow.no-print');
-    return bar.querySelector('.no-print')
-      || (bar.classList.contains('no-print') ? bar.querySelector(':scope > div:last-child') : null);
+    // 見出しごと no-print の画面は、ボタンが div ではなく直に並んでいることがある。帯そのものに足す
+    return bar.querySelector('.no-print') || (bar.classList.contains('no-print') ? bar : null);
   }
 
   // この画面が何のためのものかを出す（js/help.js）。教えてくれる同僚がいない前提の画面内ヘルプ

@@ -16,7 +16,7 @@
   // ---------- 期間の表 ----------
   App.registerScreen('census', async function (params, root) {
     const m = ms(), meals = M.activeMeals(m), today = U.today();
-    const start = params[0] || today;
+    const start = U.dateOr(params[0], today);
     const residents = await DB.residents();
     const dailies = {}; (await DB.getAll('daily')).forEach((x) => { dailies[x.date] = x; });
     const days = []; for (let i = 0; i < span; i++) days.push(M.addDays(start, i));
@@ -138,7 +138,7 @@
   };
 
   App.registerScreen('day', async function (params, root) {
-    const date = params[0] || U.today();
+    const date = U.dateOr(params[0]);
     root.appendChild(h('header', { class: 'topbar' }, h('h1', null, U.fmtDate(date, true) + ' の食数と変更'),
       h('div', { class: 'no-print' }, h('button', { class: 'btn', onclick: () => window.print() }, '変更連絡票として印刷'), ' ',
         h('a', { class: 'btn', href: '#/cards/' + date }, 'この日の食札へ'))));

@@ -57,7 +57,7 @@
 
   // ---- 予定献立表・調理指示書 ----
   App.registerScreen('kondate', async function (params, root) {
-    const date = params[0] || U.today();
+    const date = U.dateOr(params[0]);
     const m = ms();
     const data = await K.unfold(date);
     root.appendChild(h('header', { class: 'topbar' }, h('h1', null, '予定献立表・調理指示書　' + U.fmtDate(date, true)),
@@ -111,7 +111,7 @@
 
   // ---- 発注書・食料品消費日計表 ----
   App.registerScreen('order', async function (params, root) {
-    const from = params[0] || U.today();
+    const from = U.dateOr(params[0]);
     const days = parseInt(params[1], 10) || 7;
     const m = ms();
     const list = []; for (let i = 0; i < days; i++) list.push(M.addDays(from, i));

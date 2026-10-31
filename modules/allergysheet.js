@@ -7,7 +7,7 @@
 
   App.registerScreen('allergysheet', async function (params, root) {
     const m = ms(), meals = M.activeMeals(m), next = V.nextSlot();
-    const date = params[0] || next.d;
+    const date = U.dateOr(params[0], next.d);
     const mealId = params[1] || (date === next.d ? next.m : meals[0].id);
     const slot = { d: date, m: mealId };
     const dishMap = {};

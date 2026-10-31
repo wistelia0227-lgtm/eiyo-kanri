@@ -244,7 +244,7 @@
   // ---- 献立の画面 ----
   App.registerScreen('menu', async function (params, root) {
     const m = ms(), meals = M.activeMeals(m), today = U.today();
-    const start = params[0] || today;
+    const start = U.dateOr(params[0], today);
     const sId = shokushu || (m.shokushu[0] && m.shokushu[0].id);
     const dishMap = {};
     (await Dishes.all()).forEach((d) => { dishMap[d.id] = d; });

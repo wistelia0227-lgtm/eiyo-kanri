@@ -51,7 +51,7 @@
   // ---- 画面 ----
   App.registerScreen('stock', async function (params, root) {
     if (params[0] === 'kenshu' || params[0] === 'ledger' || params[0] === 'count') tab = params[0];
-    const date = params[1] || U.today();
+    const date = U.dateOr(params[1]);
     const rows = await S.all();
     // 検収の記録簿は紙の様式（表題は台紙が持つ）なので、画面の見出しは刷らない
     root.appendChild(h('header', { class: 'topbar' + (tab === 'kenshu' ? ' no-print' : '') }, h('h1', null, '検収・在庫'),
@@ -307,7 +307,7 @@
 
   // ---- 1 食品の出入り ----
   App.registerScreen('stockone', async function (params, root) {
-    const no = params[0], ym = params[1] || U.today().slice(0, 7);
+    const no = params[0], ym = U.monthOr(params[1]);
     const rows = (await S.all()).filter((r) => r.no === no).sort((a, b) => a.date.localeCompare(b.date) || (a.at || 0) - (b.at || 0));
     const f = N.get(no);
     root.appendChild(h('header', { class: 'topbar' }, h('h1', null, (f ? Foods.shortName(f.name) : no) + '　受払い'),

@@ -52,8 +52,19 @@
     const d = new Date();
     return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
   };
+  // URL の日付の受け口。壊れた hash（#/census/r1 のような取り違え）で画面が落ちないように、
+  // 日付の形でなければ今日に落とす。実在しない日（2026-02-30）も弾く。
+  U.isDate = function (s) {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(String(s || ''))) return false;
+    const p = String(s).split('-').map(Number);
+    const d = new Date(p[0], p[1] - 1, p[2]);
+    return d.getFullYear() === p[0] && d.getMonth() === p[1] - 1 && d.getDate() === p[2];
+  };
+  U.dateOr = (s, dflt) => (U.isDate(s) ? s : (dflt || U.today()));
+  U.isMonth = (s) => /^\d{4}-(0[1-9]|1[0-2])$/.test(String(s || ''));
+  U.monthOr = (s, dflt) => (U.isMonth(s) ? s : (dflt || U.today().slice(0, 7)));
   U.fmtDate = function (s, withYear) {
-    if (!s) return '';
+    if (!U.isDate(s)) return '';
     const p = s.split('-').map(Number);
     const d = new Date(p[0], p[1] - 1, p[2]);
     return (withYear ? p[0] + '/' : '') + p[1] + '/' + p[2] + '(' + WD[d.getDay()] + ')';

@@ -17,7 +17,7 @@
   J.save = (rec) => DB.put('menus', rec);
 
   App.registerScreen('jisshi', async function (params, root) {
-    const date = params[0] || U.today();
+    const date = U.dateOr(params[0]);
     const m = ms(), meals = M.activeMeals(m);
     const rec = await Menu.get(date);
     const dishMap = {};

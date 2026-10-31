@@ -340,7 +340,7 @@
   // ---- 画面 ----
   App.registerScreen('houkoku', async function (params, root) {
     if (params[0] && HK.form(params[0])) formId = params[0];
-    period = params[1] || period || H.periodNow();
+    period = U.monthOr(params[1], period || H.periodNow());
     const form = HK.form(formId), m = ms();
     const shok = m.shokushu || [];
     if (!sId) sId = (shok[0] && shok[0].id) || '';

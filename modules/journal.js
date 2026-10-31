@@ -56,7 +56,7 @@
 
   // ---- 画面 ----
   App.registerScreen('journal', async function (params, root) {
-    const date = params[0] || U.today();
+    const date = U.dateOr(params[0]);
     const m = ms(), meals = M.activeMeals(m), form = J.form();
     const rec = await J.get(date);
     const residents = await DB.residents();
@@ -125,7 +125,7 @@
 
   // ---- 1 か月ぶんの一覧（つけ忘れを見つける）----
   App.registerScreen('journallist', async function (params, root) {
-    const ym = params[0] || U.today().slice(0, 7);
+    const ym = U.dateOr(params[0]).slice(0, 7);
     const m = ms(), meals = M.activeMeals(m);
     const days = window.Report ? window.Report.daysOf(ym) : [];
     const recs = {};

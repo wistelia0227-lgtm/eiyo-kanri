@@ -220,7 +220,7 @@
 
   App.registerScreen('cards', async function (params, root) {
     const m = ms(), meals = M.activeMeals(m), next = V.nextSlot();
-    const date = params[0] || next.d;
+    const date = U.dateOr(params[0], next.d);
     const mealId = params[1] || (date === next.d ? next.m : meals[0].id);
     const slot = { d: date, m: mealId };
     const lay = M.item(m.cardLayouts, st.layout) || m.cardLayouts[0];
@@ -266,7 +266,7 @@
 
   App.registerScreen('kinshi', async function (params, root) {
     const m = ms(), meals = M.activeMeals(m);
-    const date = params[0] || U.today();
+    const date = U.dateOr(params[0]);
     const residents = await DB.residents();
     const rows = [];
     residents.forEach((r) => {
@@ -296,7 +296,7 @@
   // 献立を持たない施設でも使える「今日出る物」の突き合わせ
   App.registerScreen('check', async function (params, root) {
     const m = ms(), meals = M.activeMeals(m);
-    const date = params[0] || U.today();
+    const date = U.dateOr(params[0]);
     const mealId = params[1] || meals[0].id;
     const residents = await DB.residents();
     let words = [];

@@ -28,7 +28,7 @@
   const pct = (v) => v == null ? '—' : (v > 0 ? '▼' : v < 0 ? '▲' : '') + Math.abs(v).toFixed(1) + '%';
 
   App.registerScreen('weights', async function (params, root) {
-    const m = ms(), date = params[0] || U.today(), month = date.slice(0, 7);
+    const m = ms(), date = U.dateOr(params[0]), month = date.slice(0, 7);
     const residents = (await DB.residents()).filter((r) => !r.archived && M.status(r, date, m.meals) === 'in')
       .sort((a, b) => (a.unit + a.room).localeCompare(b.unit + b.room, 'ja') || (a.kana || a.name).localeCompare(b.kana || b.name, 'ja'));
     const all = await W.byResident();
