@@ -40,8 +40,8 @@
           i === 0 ? h('td', { rowspan: String(row.hits.length), class: 'as-dish' }, row.name) : null,
           i === 0 ? h('td', { rowspan: String(row.hits.length) }, row.shokushu.join('・')) : null,
           h('td', null, (where(x.r) ? where(x.r) + '　' : '') + V.sama(x.r.name)),
-          h('td', { class: x.kind === 'allergy' ? 'as-alg' : 'as-kin' }, (x.kind === 'allergy' ? 'アレルギー ' : '禁食 ') + x.word,
-            h('div', { class: 'as-foods' }, '← ' + x.foods.join('、'))),
+          h('td', { class: (x.level === 'maybe' ? 'as-maybe' : (x.kind === 'allergy' ? 'as-alg' : 'as-kin')) }, (x.level === 'maybe' ? '要確認 ' : '') + (x.kind === 'allergy' ? 'アレルギー ' : '禁食 ') + x.word,
+            h('div', { class: 'as-foods' }, (x.sure && x.sure.length ? '← ' + x.sure.join('、') : ''), (x.maybe && x.maybe.length ? h('span', { class: 'as-maybe-foods' }, (x.sure && x.sure.length ? '　' : '') + '要確認: ' + x.maybe.join('、')) : null))),
           h('td', null, x.sub ? x.sub : '代替: 　　　　　　')));
       }))));
     if (!hitCount && sheet.rows.length) page.appendChild(h('div', { class: 'as-ok' }, '材料・アレルギーの印から確かめられる料理では、当たる人はいません。'));
@@ -60,7 +60,8 @@
       page.appendChild(h('div', { class: 'as-note' }, '自分の食種の献立が無いため、別の食種の献立で判定した人: ',
         sheet.fallback.map((f) => V.sama(f.r.name) + '（' + (M.label(m.shokushu, f.own) || '食種なし') + ' → ' + M.label(m.shokushu, f.used) + '）').join('、')));
     }
-    page.appendChild(h('div', { class: 'as-note' }, '名前の一致で拾っています（ひらがな・カタカナ・成分表の名前と、よくある加工品の言いかえを含む）。言いかえ表に無い加工品は漏れます。'));
+    page.appendChild(h('div', { class: 'as-note' }, '名前の一致で拾っています（ひらがな・カタカナ・成分表の名前と、よくある加工品の言いかえを含む）。',
+      h('b', { class: 'as-alg' }, '赤'), '＝確実（品目そのもの・必ず含む加工品）、', h('b', { class: 'as-maybe' }, '青の点線'), '＝要確認（しょうゆ・カレー・ドレッシングなど、含むことが多いが製品で違う物。原材料で確かめる）。言いかえ表に無い加工品は漏れます。'));
     page.appendChild(h('table', { class: 'as-sign' }, h('tbody', null, h('tr', null,
       ['作成', '厨房 確認', '配膳 確認'].map((t) => [h('th', null, t), h('td', null, '')])))));
     root.appendChild(page);

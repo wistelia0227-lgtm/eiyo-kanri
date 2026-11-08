@@ -251,6 +251,14 @@
       const hit2 = M.matchRestrictions(d3, ['納豆', 'ごはん']);
       ok('禁食が当たり、代わりの物が付く', hit2.length === 1 && hit2[0].kind === 'kinshi' && hit2[0].sub === '豆腐', hit2);
       ok('当たらない物では出ない', M.matchRestrictions(d3, ['ごはん', 'みそ汁']).length === 0);
+      // 2 段の結果（確実／要確認）と誤検出の抑制
+      ok('照合の結果に段が付く（えびフライは確実）', M.matchRestrictions(d3, ['えびフライ']).every((x) => x.level === 'sure' && x.sure.length === 1));
+      ok('もも肉は「もも」に当たらない（肉の文脈で外す）', M.matchLevel('もも', ['＜畜肉類＞　ぶた　［大型種肉］　もも　脂身つき　生']) === '' && M.matchLevel('もも', ['白桃の缶詰']) === 'sure');
+      ok('豆乳・乳用肥育牛肉は「乳」に当たらない', M.matchLevel('乳', ['だいず　［その他］　豆乳　豆乳', '＜畜肉類＞　うし　［乳用肥育牛肉］　かた　脂身つき　生']) === '');
+      ok('すいか・いかなご は「いか」に当たらない', M.matchLevel('いか', ['すいか　赤肉種　生', '＜魚類＞　いかなご　生']) === '' && M.matchLevel('いか', ['するめ']) === 'sure');
+      ok('しょうゆ・カレーは小麦の「要確認」', M.matchLevel('小麦', ['こいくちしょうゆ']) === 'maybe' && M.matchLevel('小麦', ['チキンカレー']) === 'sure' && M.matchLevel('小麦', ['カレー粉']) === '');
+      ok('半角カナ・小書き・長音の揺れを吸収（ｿ-ｾ-ｼﾞ → 豚肉）', M.matchLevel('豚肉', ['ｿ-ｾ-ｼﾞ']) === 'sure' && M.matchLevel('乳', ['ﾁｰｽﾞ']) === 'sure');
+      ok('料理マスタの候補は確実と要確認に分かれる', window.Dishes.suggestAllergy([{ name: '木綿豆腐' }, { name: 'こいくちしょうゆ' }]).join() === '大豆' && window.Dishes.suggestAllergyMaybe([{ name: '木綿豆腐' }, { name: 'こいくちしょうゆ' }]).join() === '小麦');
       const rows = M.restrictionsAt(res, { d: today, m: 'd' }, m2, ['鶏肉']);
       ok('鶏肉で高橋さんが当たる（禁食 鶏肉→魚）', rows.some((x) => x.r.name === '高橋 キヨ'), rows.map((x) => x.r.name));
       ok('その枠にいない人は出ない（渡辺さんは朝で退所）', !rows.some((x) => x.r.name === '渡辺 茂'));

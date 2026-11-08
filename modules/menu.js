@@ -171,10 +171,10 @@
         h('b', null, 'この食事が当たる人（' + hitRows.length + '人）'),
         h('table', { class: 'list' }, h('tbody', null, hitRows.map((x) => h('tr', null,
           h('td', null, V.where(x.r) + ' ' + x.r.name),
-          h('td', null, x.hits.map((hh) => h('div', { class: hh.kind === 'allergy' ? 'bad-text' : 'warn-text' },
-            (hh.kind === 'allergy' ? 'アレルギー ' : '禁食 ') + hh.word + '（' + hh.where.join('・') + '）' + (hh.sub ? ' → ' + hh.sub : '')))),
+          h('td', null, x.hits.map((hh) => h('div', { class: hh.level === 'maybe' ? 'maybe-text' : (hh.kind === 'allergy' ? 'bad-text' : 'warn-text') },
+            (hh.level === 'maybe' ? '要確認 ' : '') + (hh.kind === 'allergy' ? 'アレルギー ' : '禁食 ') + hh.word + '（' + hh.where.join('・') + '）' + (hh.sub ? ' → ' + hh.sub : '')))),
           h('td', { class: 'no-print' }, h('a', { class: 'btn small', href: '#/resident/' + x.r.id }, '開く')))))),
-        h('div', { class: 'sub' }, '料理名・材料名・料理に付けたアレルギー品目との名前の一致で拾っています。加工品など名前に出ないものは漏れます。')));
+        h('div', { class: 'sub' }, '料理名・材料名・料理に付けたアレルギー品目との名前の一致で拾っています。赤＝確実（品目そのもの・必ず含む加工品）、青の点線＝要確認（しょうゆ・カレー・ドレッシングなど、含むことが多いが製品で違う物）。加工品など名前に出ないものは漏れます。')));
       else if (l.length) sumBox.appendChild(h('div', { class: 'sub' }, '禁食・アレルギーに当たる人はいません（名前の一致で確認）。'));
     };
     redraw();
@@ -254,12 +254,13 @@
     const tgt = Menu.targetOf(sId);
     const residents = await DB.residents();
     // マスごとに「禁食・アレルギーに当たる人がいるか」を先に数える
-    const warnDays = {};
+    const warnDays = {}, warnSure = {};
     days.forEach((d) => meals.forEach((ml) => {
       const l = Menu.cellDishes(recs[d], ml.id, sId);
       if (!l.length) return;
-      const n = M.restrictionsAt(residents, { d: d, m: ml.id }, m, Menu.wordsOf(l, dishMap)).length;
-      if (n) warnDays[d + '/' + ml.id] = n;
+      const rows = M.restrictionsAt(residents, { d: d, m: ml.id }, m, Menu.wordsOf(l, dishMap));
+      if (rows.length) warnDays[d + '/' + ml.id] = rows.length;
+      if (rows.some((x) => x.level === 'sure')) warnSure[d + '/' + ml.id] = true;
     }));
 
     root.appendChild(h('header', { class: 'topbar' }, h('h1', null, '献立　' + U.fmtDate(start, true) + ' 〜 ' + U.fmtDate(days[days.length - 1])),
@@ -295,11 +296,11 @@
             const l = Menu.cellDishes(recs[d], ml.id, sId);
             const s = Menu.sumCell(l, dishMap);
             const alg = Menu.allergensOf(l, dishMap);
-            return h('td', { class: 'menucell' + (warnDays[d + '/' + ml.id] ? ' hit' : ''), onclick: () => editCell(d, ml.id, sId, dishMap, residents) },
+            return h('td', { class: 'menucell' + (warnDays[d + '/' + ml.id] ? (warnSure[d + '/' + ml.id] ? ' hit' : ' hit-maybe') : ''), onclick: () => editCell(d, ml.id, sId, dishMap, residents) },
               l.length ? h('div', null, l.map((c) => h('div', { class: 'mdish' }, (dishMap[c.dishId] || { name: c.name }).name + ((c.x != null && c.x !== 1) ? ' ×' + c.x : ''))),
                 h('div', { class: 'msum' }, N.fmt('kcal', s.values.kcal) + 'kcal　食塩' + N.fmt('nacl', s.values.nacl) + 'g'),
                 alg.length ? h('div', { class: 'tag bad' }, alg.join('・')) : null,
-                warnDays[d + '/' + ml.id] ? h('div', { class: 'tag bad' }, '当たる人 ' + warnDays[d + '/' + ml.id] + '人') : null)
+                warnDays[d + '/' + ml.id] ? h('div', { class: warnSure[d + '/' + ml.id] ? 'tag bad' : 'tag maybe' }, '当たる人 ' + warnDays[d + '/' + ml.id] + '人' + (warnSure[d + '/' + ml.id] ? '' : '（要確認）')) : null)
               : h('span', { class: 'sub no-print' }, '＋'));
           }))),
         // 1 日の合計

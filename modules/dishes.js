@@ -23,7 +23,12 @@
   // 材料に含まれるアレルギー品目を、言いかえ表（Model.ALLERGEN_WORDS: こむぎ・だいず・パン など）を通した名前の一致で拾って候補にする（判定は人が確かめる）
   D.suggestAllergy = function (items) {
     const names = (items || []).map((it) => it.name).filter(Boolean);
-    return ms().allergens.filter((w) => window.Model.wordHits(w, names).length > 0);
+    return ms().allergens.filter((w) => window.Model.matchLevel(w, names) === 'sure');
+  };
+  // 含むことが多いが製品で違う物（しょうゆ・カレーなど）から見つけた品目 →「要確認」
+  D.suggestAllergyMaybe = function (items) {
+    const names = (items || []).map((it) => it.name).filter(Boolean);
+    return ms().allergens.filter((w) => window.Model.matchLevel(w, names) === 'maybe');
   };
 
   D.edit = function (dish) {
@@ -75,8 +80,11 @@
       const missing = Object.keys(per.missing || {}).length;
       if (missing) sumBox.appendChild(h('div', { class: 'sub' }, '＊が付いた成分は、未測定（−）の食品が混じっています。実際はもう少し多い可能性があります。'));
       const sug = D.suggestAllergy(d.items).filter((x) => allergyEditor.peek().indexOf(x) < 0);
-      if (sug.length) sumBox.appendChild(h('div', { class: 'card warn' }, '材料の名前から見つけた品目: ',
+      const sugM = D.suggestAllergyMaybe(d.items).filter((x) => allergyEditor.peek().indexOf(x) < 0);
+      if (sug.length || sugM.length) sumBox.appendChild(h('div', { class: 'card warn' }, '材料の名前から見つけた品目: ',
         sug.map((w) => h('button', { class: 'btn small', onclick: () => { allergyEditor.push(w); redraw(); } }, '＋ ' + w)),
+        sugM.length ? h('span', { class: 'maybe-text' }, '　要確認（しょうゆ・カレーなど製品で違う物）: ') : null,
+        sugM.map((w) => h('button', { class: 'btn small maybe', onclick: () => { allergyEditor.push(w); redraw(); } }, '？ ' + w)),
         h('div', { class: 'sub' }, '名前だけで拾っているので、加工品などは漏れます。必ず原材料を確かめてください。')));
     }
     redraw();

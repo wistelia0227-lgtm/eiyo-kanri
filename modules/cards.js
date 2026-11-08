@@ -321,12 +321,12 @@
         h('thead', null, h('tr', null, ['場所', '氏名', '当たるもの', '代わりの物', '今の食事'].map((t) => h('th', null, t)))),
         h('tbody', null, rows.map((x) => h('tr', null,
           h('td', null, V.where(x.r)), h('td', null, h('a', { href: '#/resident/' + x.r.id }, x.r.name)),
-          h('td', null, x.hits.map((hh) => h('div', { class: hh.kind === 'allergy' ? 'bad-text' : 'warn-text' },
-            (hh.kind === 'allergy' ? 'アレルギー ' : '禁食 ') + hh.word))),
+          h('td', null, x.hits.map((hh) => h('div', { class: hh.level === 'maybe' ? 'maybe-text' : (hh.kind === 'allergy' ? 'bad-text' : 'warn-text') },
+            (hh.level === 'maybe' ? '要確認 ' : '') + (hh.kind === 'allergy' ? 'アレルギー ' : '禁食 ') + hh.word + (hh.maybe && hh.maybe.length && !hh.sure.length ? '（' + hh.maybe.join('・') + '）' : '')))),
           h('td', null, x.hits.map((hh) => h('div', null, hh.sub || '—'))),
           h('td', { class: 'sub' }, V.dietShort(x.diet))))))
         : h('div', { class: 'card ok' }, '当たる人はいません。'));
-      out.appendChild(h('div', { class: 'sub' }, '名前の一致で拾っています（ひらがな・カタカナ・成分表の名前と、パン・うどん・マヨネーズ などよくある加工品の言いかえを含む）。言いかえ表に無い加工品は漏れます。原材料を確かめてください。'));
+      out.appendChild(h('div', { class: 'sub' }, '名前の一致で拾っています（ひらがな・カタカナ・成分表の名前と、パン・うどん・マヨネーズ などよくある加工品の言いかえを含む）。赤＝確実、青の点線＝要確認（しょうゆ・カレーなど含むことが多いが製品で違う物）。言いかえ表に無い加工品は漏れます。原材料を確かめてください。'));
     };
     const btn = h('button', { class: 'btn primary no-print', onclick: draw }, 'さがす');
     root.appendChild(h('div', { class: 'toolrow no-print' }, chips, btn));

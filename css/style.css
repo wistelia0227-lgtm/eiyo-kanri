@@ -68,6 +68,8 @@ summary { cursor: pointer; font-weight: 600; padding: .2rem 0; } details { margi
 .tag { display: inline-block; font-size: .8rem; padding: 0 .45rem; border-radius: 4px; background: var(--head); margin: 0 .25rem .15rem 0; }
 .tag.bad { background: var(--badbg); color: var(--bad); font-weight: 700; } .tag.warn { background: var(--warnbg); color: var(--warn); } .tag.ok { background: var(--okbg); color: var(--ok); }
 .bad-text { color: var(--bad); font-weight: 700; } .warn-text { color: var(--warn); font-weight: 600; } .ok-text { color: var(--ok); font-weight: 600; }
+/* アレルギー照合の「要確認」（含むことが多いが製品で違う物）。確実の赤と見分けるため青の点線 */
+.maybe-text { color: #1d4ed8; font-weight: 600; border-bottom: 1px dashed #60a5fa; } .tag.maybe { background: #eff6ff; color: #1d4ed8; border: 1px dashed #60a5fa; } .btn.maybe { border-style: dashed; color: #1d4ed8; }
 .warnbox { border: 2px solid var(--bad); background: var(--badbg); color: #7f1d1d; border-radius: 8px; padding: .45rem .8rem; margin: .4rem 0; font-size: 1.05rem; }
 
 table { border-collapse: collapse; width: 100%; }
@@ -169,7 +171,7 @@ table.beforeafter tr.before td { color: var(--sub); background: #f9fafb; }
 table.beforeafter tr.after td { font-weight: 600; }
 table.beforeafter td.changed { background: var(--warnbg); color: var(--bad); font-weight: 700; }
 
-table.menu td.menucell.hit { box-shadow: inset 3px 0 0 var(--bad); }
+table.menu td.menucell.hit { box-shadow: inset 3px 0 0 var(--bad); } table.menu td.menucell.hit-maybe { box-shadow: inset 3px 0 0 #60a5fa; }
 
 table.foods tbody th { white-space: normal; min-width: 7rem; }
 table.foods td.ing { white-space: normal; min-width: 16rem; max-width: 26rem; font-size: .82rem; }
@@ -318,7 +320,7 @@ table.check td:nth-child(2) { line-height: 1.45; }
 .as-table th, .as-table td { border: 1px solid #6b7280; padding: 1.2mm 2mm; text-align: left; vertical-align: top; }
 .as-table th { background: #f3f4f6; }
 .as-dish { font-weight: 700; }
-.as-alg { color: #991b1b; font-weight: 700; } .as-kin { color: #92400e; font-weight: 700; }
+.as-alg { color: #991b1b; font-weight: 700; } .as-kin { color: #92400e; font-weight: 700; } .as-maybe { color: #1d4ed8; font-weight: 700; border-bottom: 1px dashed #60a5fa; } .as-maybe-foods { color: #1d4ed8; }
 .as-foods { font-weight: 400; font-size: 8.5pt; color: #4b5563; }
 .as-none td { color: #6b7280; }
 .as-unknown { border: 2px solid #dc2626; background: #fef2f2; color: #991b1b; padding: 2mm 3mm; margin-bottom: 3mm; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
