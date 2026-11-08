@@ -7,6 +7,7 @@ const M = require('../js/model.js');
 const Master = require('../js/master.js');
 require('../js/dishes_seed.js');
 const SEED = global.DISHES_SEED;
+const TRUTH = require('./allergen_truth.json');   // 正解表（含まない物は、拾わなくなってよい）
 let n = 0, bad = 0;
 function ok(name, cond, extra) { n++; if (!cond) { bad++; console.log('NG  ' + name + (extra !== undefined ? '  → ' + JSON.stringify(extra) : '')); } else console.log('ok  ' + name); }
 const diet = (allergy, kinshi) => Object.assign(M.emptyDiet(), { allergy: allergy || [], kinshi: (kinshi || []).map((f) => ({ food: f, sub: '' })) });
@@ -69,10 +70,10 @@ ok('表示義務 9・推奨 19 の全部に表がある', Master.DEFAULTS.allerg
       const o = old(a, words), nw = hitA(a, words);
       if (o) before++;
       if (nw) after++;
-      if (o && !nw) lost.push(d.name + '×' + a);
+      if (o && !nw && (TRUTH.dishes[d.name] || { a: {} }).a[a]) lost.push(d.name + '×' + a);
     });
   });
-  ok('今まで拾えていた組み合わせが 1 つも減らない', lost.length === 0, lost);
+  ok('今まで拾えていた組み合わせのうち、正解表で「含む／可能性」の物は 1 つも減らない（もも肉×もも などの誤検出だけ減る）', lost.length === 0, lost);
   ok('拾える組み合わせが増えた（' + before + ' → ' + after + '）', after > before, [before, after]);
   const pick = (name) => SEED.dishes.find((d) => d.name === name);
   const of = (name) => { const d = pick(name); const w = [d.name].concat(d.items.map((it) => it.name)).concat(d.allergy || []);

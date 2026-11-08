@@ -12,7 +12,7 @@
   const cellOf = (rec, mealId, sId) => (rec && rec.cells && rec.cells[mealId + '/' + sId]) || [];
 
   // residents: 利用者 / dishMap: {id: 料理} / rec: その日の献立 { cells } / slot: {d, m} / masters
-  // 返り: { rows: [{key, name, shokushu:[], hits:[{r, kind, word, foods, sub}]}], unknown: [{name, shokushu:[]}],
+  // 返り: { rows: [{key, name, shokushu:[], hits:[{r, kind, word, foods, sub, level:'sure'|'maybe', sure:[], maybe:[]}]}], unknown: [{name, shokushu:[]}],
   //         eaters, fallback: [{r, used}], noDiet: [r] }
   AS.build = function (residents, dishMap, rec, slot, masters) {
     const out = { rows: [], unknown: [], eaters: 0, fallback: [], noDiet: [] };
@@ -44,7 +44,7 @@
         if (row.shokushu.indexOf(label(sId)) < 0) row.shokushu.push(label(sId));
         const words = [d.name].concat((d.items || []).map((it) => it.name)).concat(d.allergy || []);
         M.matchRestrictions(diet, words).forEach((hh) => {
-          row.hits.push({ r: r, kind: hh.kind, word: hh.word, foods: hh.where, sub: hh.sub || '' });
+          row.hits.push({ r: r, kind: hh.kind, word: hh.word, foods: hh.where, sub: hh.sub || '', level: hh.level || 'sure', sure: hh.sure || hh.where, maybe: hh.maybe || [] });
         });
       });
     });

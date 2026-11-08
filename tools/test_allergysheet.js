@@ -32,7 +32,8 @@ const suzuki = res('鈴木 トメ', { stays: [{ id: 's2', from: { d: '2026-10-01
 const people = [yamada, sato, suzuki];
 
 const hitsOf = (sheet, dishName) => ((sheet.rows.find((x) => x.name === dishName) || { hits: [] }).hits);
-const names = (hs) => hs.map((x) => x.r.name + ':' + x.word).sort().join(',');
+const names = (hs) => hs.filter((x) => x.level === 'sure').map((x) => x.r.name + ':' + x.word).sort().join(',');   // 確実の段だけ
+const maybes = (hs) => hs.filter((x) => x.level === 'maybe').map((x) => x.r.name + ':' + x.word).sort().join(',');
 
 const b = AS.build(people, dishes, menu, { d: '2026-10-22', m: 'b' }, masters);
 ok('朝: 食パンに山田さん（小麦 ← こむぎ の言いかえで当たる）', names(hitsOf(b, '食パン')) === '山田 ハナ:小麦', names(hitsOf(b, '食パン')));
@@ -43,8 +44,10 @@ ok('朝: 印も材料も無い料理は「確認できない料理」に出る',
 ok('朝: 確認できない料理は当たりの表には出さない', !b.rows.some((x) => x.name === '季節の煮物'));
 
 const l = AS.build(people, dishes, menu, { d: '2026-10-22', m: 'l' }, masters);
+ok('朝: だし巻き卵は小麦の山田さんに「要確認」（だし巻きはしょうゆを使うことが多い）', maybes(hitsOf(b, 'だし巻き卵')) === '山田 ハナ:小麦', maybes(hitsOf(b, 'だし巻き卵')));
+ok('朝: 当たりに段（sure/maybe）が付く', hitsOf(b, '食パン').every((x) => x.level === 'sure' || x.level === 'maybe'));
 ok('昼: 版が切り替わり、だし巻き卵に山田さん（卵）', names(hitsOf(l, 'だし巻き卵')) === '山田 ハナ:卵', names(hitsOf(l, 'だし巻き卵')));
-ok('昼: 欠食の佐藤さんは出ない（照り焼きに当たる人なし）', hitsOf(l, '照り焼き').length === 0, names(hitsOf(l, '照り焼き')));
+ok('昼: 欠食の佐藤さんは出ない（照り焼きに確実の当たりなし。山田さんの小麦は「照り焼」で要確認）', names(hitsOf(l, '照り焼き')) === '' && maybes(hitsOf(l, '照り焼き')) === '山田 ハナ:小麦', maybes(hitsOf(l, '照り焼き')));
 ok('昼: 確認できない料理は無い', l.unknown.length === 0);
 ok('昼: 食べる人の数（山田さんだけ）', l.eaters === 1, l.eaters);
 
