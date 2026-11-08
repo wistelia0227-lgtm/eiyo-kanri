@@ -497,7 +497,10 @@
     (words || []).forEach((w) => {
       const raw = (w && typeof w === 'object') ? w.raw : w;
       const n = (w && typeof w === 'object') ? w.n : M.normWord(w);
-      const lv = levelOf(spec, n);
+      // そろえ済みの言葉（prepWords）には、品目ごとの判定を覚えておく（同じ料理を大勢と突き合わせる時に効く）
+      const memo = (w && typeof w === 'object' && spec.key) ? (w.lv || (w.lv = Object.create(null))) : null;
+      const lv = (memo && spec.key in memo) ? memo[spec.key] : levelOf(spec, n);
+      if (memo) memo[spec.key] = lv;
       if (lv) out[lv].push(raw);
     });
     return out;

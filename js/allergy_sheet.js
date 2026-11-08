@@ -16,7 +16,7 @@
   //         eaters, fallback: [{r, used}], noDiet: [r] }
   AS.build = function (residents, dishMap, rec, slot, masters) {
     const out = { rows: [], unknown: [], eaters: 0, fallback: [], noDiet: [] };
-    const rowMap = Object.create(null), unkMap = Object.create(null);
+    const rowMap = Object.create(null), unkMap = Object.create(null), wordsMap = Object.create(null);
     const label = (sId) => M.label(masters.shokushu, sId) || sId;
     const keyOf = (c) => c.dishId ? 'd:' + c.dishId : 'n:' + (c.name || '');
     (residents || []).forEach((r) => {
@@ -42,7 +42,8 @@
         }
         const row = rowMap[k] || (rowMap[k] = { key: k, name: name, shokushu: [], hits: [] });
         if (row.shokushu.indexOf(label(sId)) < 0) row.shokushu.push(label(sId));
-        const words = [d.name].concat((d.items || []).map((it) => it.name)).concat(d.allergy || []);
+        // 料理の言葉は 1 回だけそろえる（同じ料理を大勢と突き合わせるので）
+        const words = wordsMap[k] || (wordsMap[k] = M.prepWords([d.name].concat((d.items || []).map((it) => it.name)).concat(d.allergy || [])));
         M.matchRestrictions(diet, words).forEach((hh) => {
           row.hits.push({ r: r, kind: hh.kind, word: hh.word, foods: hh.where, sub: hh.sub || '', level: hh.level || 'sure', sure: hh.sure || hh.where, maybe: hh.maybe || [] });
         });
