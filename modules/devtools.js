@@ -1117,7 +1117,8 @@
       (await DB.getAll('dishes')).forEach((d) => { dmA[d.id] = Object.assign({ items: [], allergy: [] }, d); });
       const expect = window.AllergySheet.build(await DB.residents(), dmA, recM, { d: today, m: 'l' }, m2);
       const nHits = expect.rows.reduce((a, x) => a + x.hits.length, 0);
-      ok('アレルギー表: 当たりの数が中身の計算と同じ', boxA.querySelectorAll('.as-alg, .as-kin').length === nHits, [boxA.querySelectorAll('.as-alg, .as-kin').length, nHits]);
+      const nCells = boxA.querySelectorAll('.as-table td.as-alg, .as-table td.as-kin, .as-table td.as-maybe').length;   // 凡例の色見本は数えない
+      ok('アレルギー表: 当たりの数（確実＋要確認）が中身の計算と同じ', nCells === nHits, [nCells, nHits]);
       ok('アレルギー表: 代わりの物が無い当たりには手書きの代替欄', Array.from(boxA.querySelectorAll('.as-table td')).filter((td) => /^代替: /.test(td.textContent)).length
         === expect.rows.reduce((a, x) => a + x.hits.filter((y) => !y.sub).length, 0));
       await DB.putRaw('menus', [keepM]);
