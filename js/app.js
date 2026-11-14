@@ -22,15 +22,15 @@
 
   // 印刷ボタンは画面ごとに置いてあるが、Excel を 20 画面ぶん書き足すと同じ物が増える。
   // 表を拾う仕組み（js/util.js の U.xlsxScreen）が画面に依らないので、ここで一度だけ付ける。
-  // ボタンを置く入れ物を探す。画面によって見出しの作りが 3 通りある
+  // ボタンを置く入れ物を探す。画面によって見出しの作りがいろいろある
   //   ふつう: header.topbar の中の .no-print
-  //   見出しごと no-print（衛生・報告書）: その最後の div
+  //   見出しごと no-print（衛生・報告書）やボタンが直に並ぶ形: 帯そのもの
   //   見出しを持たない（アレルギー表）: 先頭の操作の帯
+  // ボタン自身に no-print を付けてあるので、帯そのものに足しても紙には出ない。
   function barOf(box) {
     const bar = box.querySelector('header.topbar');
     if (!bar) return box.querySelector('.toolrow.no-print');
-    // 見出しごと no-print の画面は、ボタンが div ではなく直に並んでいることがある。帯そのものに足す
-    return bar.querySelector('.no-print') || (bar.classList.contains('no-print') ? bar : null);
+    return bar.querySelector('.no-print') || bar;
   }
 
   // この画面が何のためのものかを出す（js/help.js）。教えてくれる同僚がいない前提の画面内ヘルプ
@@ -41,7 +41,7 @@
     const target = barOf(box);
     if (!target || target.querySelector('[data-help-btn]')) return;
     target.appendChild(h('button', {
-      class: 'btn', 'data-help-btn': '1', title: 'この画面は何か',
+      class: 'btn no-print', 'data-help-btn': '1', title: 'この画面は何か',
       onclick: () => {
         let close;
         close = U.modal(h('div', null,
@@ -64,7 +64,7 @@
     if (target.querySelector('[data-xlsx-btn]')) return;
 
     const btn = h('button', {
-      class: 'btn',
+      class: 'btn no-print',
       'data-xlsx-btn': '1',
       title: '画面に出ている表をそのまま Excel にします',
       onclick: () => {

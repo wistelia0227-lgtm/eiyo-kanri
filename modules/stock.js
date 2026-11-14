@@ -310,7 +310,8 @@
     const no = params[0], ym = U.monthOr(params[1]);
     const rows = (await S.all()).filter((r) => r.no === no).sort((a, b) => a.date.localeCompare(b.date) || (a.at || 0) - (b.at || 0));
     const f = N.get(no);
-    root.appendChild(h('header', { class: 'topbar' }, h('h1', null, (f ? Foods.shortName(f.name) : no) + '　受払い'),
+    // 品番が無いまま開かれることがある（#/stockone だけの URL）。「undefined 受払い」と出さない
+    root.appendChild(h('header', { class: 'topbar' }, h('h1', null, (f ? Foods.shortName(f.name) : (no || '食材')) + '　受払い'),
       h('div', { class: 'no-print' }, h('a', { class: 'btn', href: '#/stock/ledger/' + ym + '-01' }, '一覧に戻る'))));
     if (!rows.length) { root.appendChild(h('div', { class: 'empty' }, '出入りがありません。')); return; }
     let run = 0;

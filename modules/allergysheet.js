@@ -29,8 +29,11 @@
       h('div', null, h('b', null, U.fmtDate(date, true) + '　' + M.label(m.meals, mealId)), '　食べる人 ' + sheet.eaters + ' 人')));
 
     const hitCount = sheet.rows.reduce((a, x) => a + x.hits.length, 0);
+    // 献立が無いときは、空の表と凡例まで出すと紙も画面も読みにくい。言葉だけ出して止める
     if (!Object.keys(rec.cells || {}).some((k) => k.indexOf(mealId + '/') === 0 && rec.cells[k].length)) {
       page.appendChild(h('div', { class: 'as-warn' }, 'この食事の献立がまだありません。献立を入れてから開いてください。'));
+      root.appendChild(page);
+      return;
     }
     page.appendChild(h('table', { class: 'as-table' },
       h('thead', null, h('tr', null, ['料理', '食種', '当たる人', '当たったもの（← 食材・料理の名前）', '代替'].map((t) => h('th', null, t)))),
