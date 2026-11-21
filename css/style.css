@@ -34,6 +34,17 @@ h2.sec { margin: 1.4rem 0 .5rem; }
 .card.info { background: var(--infobg); border-color: #bfdbfe; } .card.warn { background: var(--warnbg); border-color: #fcd34d; }
 .card.bad { background: var(--badbg); border-color: #fca5a5; } .card.ok { background: var(--okbg); border-color: #86efac; }
 .card.todo { padding: .6rem 1rem; margin: .35rem 0; } a.card.todo:hover { filter: brightness(.97); }
+/* 保存の手応え（js/app.js の watchSaves）。画面ごとに印を足さず 1 か所で出す小さな札 */
+#savechip { position: fixed; right: 1rem; bottom: 1rem; z-index: 60; background: var(--text); color: #fff;
+  padding: .35rem .8rem; border-radius: 999px; font-size: .85rem; box-shadow: 0 2px 8px rgba(0,0,0,.25);
+  opacity: 0; transform: translateY(.4rem); transition: opacity .18s, transform .18s; pointer-events: none; }
+#savechip.on { opacity: .92; transform: translateY(0); }
+@media print { #savechip { display: none !important; } }
+/* やることの行は押すとその画面へ行く。見た目が板のままだと押せると気づかないので、端に › を出す */
+a.card.todo { display: block; position: relative; padding-right: 2rem; }
+a.card.todo::after { content: '›'; position: absolute; right: .8rem; top: 50%; transform: translateY(-50%); opacity: .45; font-size: 1.2rem; }
+a.card.todo:hover { filter: brightness(.97); box-shadow: 0 0 0 1px var(--line) inset; }
+a.card.todo:hover::after { opacity: .9; }
 .sec-head { display: flex; justify-content: space-between; align-items: center; gap: .6rem; flex-wrap: wrap; margin-bottom: .4rem; } .sec-head h2 { margin: 0; }
 .empty { color: var(--sub); padding: .8rem; }
 summary { cursor: pointer; font-weight: 600; padding: .2rem 0; } details { margin: .5rem 0; }

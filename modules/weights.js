@@ -64,14 +64,14 @@
         const v = parseFloat(inp.value), id = r.id + '_w_' + date;
         if (v > 0) await DB.put('measures', { id: id, residentId: r.id, kind: 'weight', date: date, value: v, recordedAt: Date.now(), by: V.recorder() });
         else if (today) await DB.del('measures', id);
-        if (document.activeElement && document.activeElement.tagName === 'INPUT') { saved.textContent = '保存'; return; } // 入力の途中で表を描き直さない
+        // 入力の途中で表を描き直さない。保存の手応えは画面の右下の札（js/app.js の watchSaves）が出す
+        if (document.activeElement && document.activeElement.tagName === 'INPUT') return;
         App.refresh();
       });
-      const saved = h('span', { class: 'sub' });
       inputs.push(inp); showDiff();
       return h('tr', null, h('td', null, V.where(r)), h('td', null, h('a', { href: '#/resident/' + r.id }, r.name)),
         h('td', { class: 'sub' }, prev ? prev.value.toFixed(1) + 'kg（' + U.fmtDate(prev.date) + '）' : '—'),
-        h('td', { class: 'no-print-border' }, inp, ' ', saved), h('td', null, outCells),
+        h('td', { class: 'no-print-border' }, inp), h('td', null, outCells),
         h('td', null, ev.bmi ? ev.bmi.toFixed(1) : (r.heightCm ? '—' : h('span', { class: 'sub' }, '身長なし'))),
         h('td', null, pct(ev.loss.m1)), h('td', null, pct(ev.loss.m3)), h('td', null, pct(ev.loss.m6)), h('td', null, W.riskBadge(ev.risk), ' ', h('span', { class: 'sub' }, ev.risk.reasons.join('、'))));
     });

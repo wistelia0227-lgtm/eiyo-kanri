@@ -143,6 +143,15 @@
     const navNames = () => { App.screens.home && 0; const bar = document.getElementById('nav'); return bar ? bar.textContent : ''; };
     prof.features.cards = false; await window.Master.save();
     document.getElementById('nav').innerHTML = '';
+    {
+      // やることの行は押すとその画面へ行く。href の付け忘れを見つける
+      const boxHome = h('div');
+      await App.screens.home([], boxHome);
+      const rows = [...boxHome.querySelectorAll('.card.todo')];
+      const dead = rows.filter((x) => x.tagName !== 'A').map((x) => x.textContent.slice(0, 24));
+      ok('やることの行が 1 つ以上ある', rows.length > 0, rows.length);
+      ok('やることの行は全部その画面へ行ける（href 付き）', dead.length === 0, dead);
+    }
     await App.screens.home([], h('div'));
     ok('機能を切っても画面の関数は残る（直接開けば動く）', typeof App.screens.cards === 'function');
     ok('切った機能はメニューに出ない', !window.Profile.enabled(prof, 'cards'), navNames());

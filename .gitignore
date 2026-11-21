@@ -1,3 +1,4 @@
 tools/update_state.json
 tools/update_report.txt
 *.bak_*
+tools/_cdpprofile/

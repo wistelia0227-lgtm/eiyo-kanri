@@ -12,6 +12,26 @@
   // 「今日やること」に行を出す係。fn(ctx) → [{level:'bad'|'warn'|'info', text, href}]
   App.registerTodo = (fn) => { App.todos.push(fn); };
 
+  // 保存の手応え。16 画面が欄を離れた時に黙って保存していて、「入ったのか」が分からなかった。
+  // 画面ごとに印を足すと同じ物が増えるので、書き込みの時刻（DB.touched）を見て 1 か所で出す。
+  // 欄ごとに出すと目がちらつくので、少しの間だけ出して消える小さな札にしてある。
+  function watchSaves() {
+    if (!window.DB) return;
+    let seen = window.DB.touched || 0, chip = null, timer = 0;
+    setInterval(function () {
+      const now = window.DB.touched || 0;
+      if (now === seen) return;
+      seen = now;
+      if (!chip) {
+        chip = h('div', { id: 'savechip', class: 'no-print' }, '保存しました');
+        document.body.appendChild(chip);
+      }
+      chip.classList.add('on');
+      clearTimeout(timer);
+      timer = setTimeout(function () { chip.classList.remove('on'); }, 1400);
+    }, 400);
+  }
+
   App.go = function (hash) { if (location.hash === hash) App.refresh(); else location.hash = hash; };
   App.refresh = () => render(true);
 
@@ -136,6 +156,7 @@
       if (App.beforeStart) await App.beforeStart();
       render(false);
       App.ready.forEach((fn) => { try { fn(); } catch (e) { console.warn('onReady', e); } });
+      watchSaves();
     };
     if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot); else boot();
   };
