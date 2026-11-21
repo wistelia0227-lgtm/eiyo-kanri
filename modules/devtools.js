@@ -1275,6 +1275,78 @@
       ok('壊れた URL でも全画面が落ちない', broke.length === 0, broke.slice(0, 5));
     }
 
+    // 窓（U.modal）の Esc・焦点。keys.js が節点を直に消していた頃は、Esc で閉じた確認の
+    // 約束が解決せず、消す処理がそのまま止まっていた。目では分からないので試験で縛る
+    {
+      // 自己テストでは App.start を差し替えているので onReady が走らない。
+      // Esc の配線（keys.js の keydown → U.escapeTop）まで試したいので自分で起こす
+      if (window.Keys && window.Keys.start) window.Keys.start();
+      const esc = () => document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+      const tick = (ms) => new Promise((r) => setTimeout(r, ms));
+      const live = () => document.querySelectorAll('.modal-bg').length;
+
+      ok('閉じる窓が無いとき U.escapeTop は false', U.escapeTop() === false);
+
+      let got = 'まだ';
+      U.confirm('試験').then((v) => { got = '解決 ' + v; });
+      await tick(30);
+      ok('確認の窓は押してほしいボタンに焦点が入る', document.activeElement && document.activeElement.textContent === 'OK', document.activeElement && document.activeElement.textContent);
+      esc(); await tick(30);
+      ok('確認を Esc で閉じると false に解決する（呼んだ側が止まらない）', got === '解決 false', got);
+      ok('Esc のあと窓が残らない', live() === 0, live());
+
+      let got2 = 'まだ';
+      U.confirm('消します', { okLabel: '消す', danger: true }).then((v) => { got2 = '解決 ' + v; });
+      await tick(30);
+      ok('消す確認は「やめる」に焦点が入る（Enter で消えない）', document.activeElement && document.activeElement.textContent === 'やめる', document.activeElement && document.activeElement.textContent);
+      esc(); await tick(30);
+      ok('消す確認の Esc も false', got2 === '解決 false', got2);
+
+      let shut = 'まだ';
+      const inp = h('input', { class: 'input', type: 'text' });
+      U.modal(h('div', null, inp, h('div', { class: 'modal-btns' }, h('button', { class: 'btn primary' }, '保存'))),
+        { onclose: () => { shut = '閉じた'; } });
+      await tick(30);
+      ok('欄のある窓は最初の欄に焦点が入る', document.activeElement === inp, document.activeElement && document.activeElement.tagName);
+      inp.value = 'あ'; inp.dispatchEvent(new Event('input', { bubbles: true }));
+      esc(); await tick(30);
+      ok('書きかけの窓を Esc で閉じると、捨てるか確かめる', live() === 2 && /捨てて/.test((document.querySelector('.modal-msg') || {}).textContent || ''), live());
+      esc(); await tick(30);
+      ok('その確認を Esc で閉じても元の窓は残る', live() === 1 && shut === 'まだ', [live(), shut]);
+      esc(); await tick(30);
+      const yes = [].slice.call(document.querySelectorAll('.modal-btns .btn')).filter((b) => b.textContent === '捨てて閉じる')[0];
+      if (yes) yes.click();
+      await tick(30);
+      ok('「捨てて閉じる」で窓が閉じ、onclose が呼ばれる', live() === 0 && shut === '閉じた', [live(), shut]);
+      while (live()) document.querySelector('.modal-bg').remove();
+    }
+
+    // 紙に出す時の決まり。media print は JS から切り替えられないので、CSS に決まりが
+    // 残っているかで縛る（実機の見た目は tools/cdp.ps1 -Media print で見る）
+    {
+      let txt = '';
+      [].slice.call(document.styleSheets).forEach((s) => {
+        let rules; try { rules = s.cssRules; } catch (e) { return; }
+        [].slice.call(rules || []).forEach((r) => {
+          if (r.media && /print/.test(r.conditionText || r.media.mediaText || '')) txt += r.cssText;
+        });
+      });
+      ok('紙の決まりが CSS にある', txt.length > 0, txt.length);
+      ok('紙に押せる物を出さない', /button\.btn\s*{[^}]*display:\s*none/.test(txt) || /button,\s*button\.btn\s*{[^}]*display:\s*none/.test(txt), txt.slice(0, 0));
+      ok('段の選びは選んだ物だけ紙に残す', /\.segrow\s+button\.btn\.seg\.on/.test(txt));
+      ok('紙の継ぎ目で表の行を割らない', /table\s+tr\s*{[^}]*break-inside:\s*avoid/.test(txt));
+
+      // 頭の 1 行（施設名・出力日時）。様式は自前の見出しを持つので重ねない
+      // hash を変えると hashchange の描画も走るので、落ち着くまで待ってから見る
+      const draw = async (hash) => { location.hash = hash; await App.refresh(); await new Promise((r) => setTimeout(r, 500)); };
+      await draw('#/residents');
+      const ph = document.querySelector('#root .printhead');
+      ok('ふつうの画面には紙の見出しが付く', !!ph && /出力 20\d\d\//.test(ph.textContent), ph && ph.textContent);
+      await draw('#/hygiene');
+      ok('様式の画面には紙の見出しを重ねない',
+        document.querySelectorAll('#root .paper, #root .sheet').length === 1 && !document.querySelector('#root .printhead'));
+    }
+
     // 画面内ヘルプ（js/help.js）。画面を足したらヘルプも足す、を試験で縛る
     if (window.Help) {
       const scr = Object.keys(App.screens);

@@ -9,6 +9,7 @@ h1 { font-size: 1.35rem; margin: 0; } h2 { font-size: 1.08rem; margin: 0 0 .5rem
 h2.sec { margin: 1.4rem 0 .5rem; }
 [hidden] { display: none !important; }
 .print-only { display: none; }
+.printhead { display: none; }
 
 #layout { display: flex; min-height: 100vh; }
 #nav { width: 168px; flex: none; background: #e5e7eb; border-right: 1px solid var(--line); padding: .6rem .5rem; position: sticky; top: 0; height: 100vh; overflow: auto; }
@@ -73,7 +74,8 @@ summary { cursor: pointer; font-weight: 600; padding: .2rem 0; } details { margi
 .modal { background: var(--panel); border-radius: 12px; padding: 1.1rem 1.3rem; width: 100%; max-width: 34rem; } .modal-bg.wide .modal { max-width: 60rem; }
 .modal-msg { white-space: pre-wrap; margin: .3rem 0 1rem; } .modal-btns { display: flex; justify-content: flex-end; gap: .5rem; margin-top: 1rem; }
 
-.badge { display: inline-block; font-size: .8rem; padding: .05rem .55rem; border-radius: 999px; font-weight: 600; vertical-align: middle; }
+/* 印は折らない。狭い列で「在籍中」が「在籍／中」の 2 行になって行が高くなっていた */
+.badge { display: inline-block; font-size: .8rem; padding: .05rem .55rem; border-radius: 999px; font-weight: 600; vertical-align: middle; white-space: nowrap; }
 .badge.ok { background: var(--okbg); color: var(--ok); } .badge.info { background: var(--infobg); color: var(--info); } .badge.mute { background: var(--head); color: var(--sub); }
 .badge.warn { background: var(--warnbg); color: var(--warn); } .badge.bad { background: var(--badbg); color: var(--bad); }
 .tag { display: inline-block; font-size: .8rem; padding: 0 .45rem; border-radius: 4px; background: var(--head); margin: 0 .25rem .15rem 0; }
@@ -136,6 +138,19 @@ table.edit td { padding: .2rem .3rem; }
   a { color: inherit; text-decoration: none; } table.list thead th { position: static; }
   .no-print-border, .no-print-border.input { border: 0; } input[type=number] { -moz-appearance: textfield; appearance: textfield; }
   details:not([open]) { display: none; } summary { display: none; }
+  /* 紙の継ぎ目。一覧の行は 60px あって、そのまま刷ると名前が上下の頁に割れる。
+     見出しだけが頁の末尾に残るのも読みにくいので、次の行と一緒に送る。
+     頁より高い行は指定を無視して割れるので、様式の大きな枠は今までどおり */
+  table tr { page-break-inside: avoid; break-inside: avoid; }
+  h1, h2, h3 { page-break-after: avoid; break-after: avoid; }
+  /* 紙に押せる物は要らない。7 画面（入居者・料理・実施記録・嗜好・日誌・まとめて取り込む・設定）
+     でボタンがそのまま刷られていた。実施記録は 1 枚に 84 個、設定は 368 個。
+     段の選びは、選んだ物だけ字で残す。.btn.seg.on は濃い地に白字なので、
+     プリンタが地の色を落とすと白字だけが残り、選んだ答えが紙から消えていた */
+  .printhead { display: flex; justify-content: space-between; font-size: .78rem; color: #374151;
+    border-bottom: .3mm solid #9ca3af; padding-bottom: 1mm; margin-bottom: 2.5mm; }
+  button, button.btn { display: none; }
+  .segrow button.btn.seg.on { display: inline-block; background: transparent; color: #000; border: 1px solid #000; }
 }
 
 /* 事業所の登録・リンク集 */

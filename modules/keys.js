@@ -142,7 +142,8 @@
         listContainer
       );
 
-      closeModal = U.modal(body);
+      // 探す窓は打ち込んだ字を捨てても何も失わないので、Esc で確認しない
+      closeModal = U.modal(body, { askDiscard: false });
       renderList();
       setTimeout(() => input.focus(), 0);
     },
@@ -168,11 +169,9 @@
         }
 
         if (e.key === 'Escape') {
-          const modals = document.querySelectorAll('.modal-bg');
-          if (modals.length > 0) {
-            const lastModal = modals[modals.length - 1];
-            lastModal.remove();
-          }
+          // 閉じるのは util.js の受け持ち。節点を直に消すと、約束の解決・焦点の戻し・
+          // 書きかけの確認が全部とばされる
+          U.escapeTop();
         }
       });
     }

@@ -103,6 +103,18 @@
     target.appendChild(btn);
   }
 
+  // 紙にしたときの頭の 1 行。画面をそのまま刷ると、どこの施設の何日の紙か分からないまま
+  // 綴じられる（監査や保健所に出す束で後から拾えない）。様式（.paper / .sheet）は
+  // 自前の見出しに施設名も日付も入っているので足さない。
+  function addPrintHead(box) {
+    if (box.querySelector('.paper, .sheet')) return;
+    const fac = ((window.Master && window.Master.current.facility) || {}).name || '';
+    box.insertBefore(h('div', { class: 'printhead' },
+      h('span', null, fac),
+      // 綴じたあと何年の紙か要るので年から書く（U.fmtDateTime は画面用で年を出さない）
+      h('span', null, '出力 ' + U.today().slice(0, 4) + '/' + U.fmtDateTime(Date.now()))), box.firstChild);
+  }
+
   async function render(keepScroll) {
     const my = ++token;
     const route = parse();
@@ -121,6 +133,7 @@
     root.innerHTML = '';
     addHelpButton(box, route);   // ? が左、Excel が右に並ぶ
     addExcelButton(box, route);
+    addPrintHead(box);
     root.appendChild(box);
     lastRoute = location.hash;
     window.scrollTo(0, y);

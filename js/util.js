@@ -87,21 +87,76 @@
   };
 
   // モーダル。close() を返す。背景クリックでは閉じない（入力の消失防止）
+  //
+  // Esc と焦点をここで 1 回だけ見る。画面ごとに書くと必ず抜けるため。
+  // 以前は keys.js が .modal-bg の節点を直に remove していて、3 つ穴があった:
+  //   ・U.confirm を Esc で閉じると約束が解決せず、呼んだ側（消す処理など）が永久に止まる
+  //   ・窓を出しても焦点が body のままで、Tab が窓の後ろの画面へ抜ける
+  //   ・書きかけの計画書が Esc 一発で黙って消える
+  const modalStack = [];
+  function focusables(box) {
+    return [].slice.call(box.querySelectorAll('input, select, textarea, button, a[href], [tabindex]'))
+      .filter((el) => !el.disabled && el.type !== 'hidden' && el.tabIndex !== -1 && el.getClientRects().length > 0);
+  }
   U.modal = function (content, opts) {
-    const bg = h('div', { class: 'modal-bg no-print' + (opts && opts.wide ? ' wide' : '') }, h('div', { class: 'modal' }, content));
+    opts = opts || {};
+    const bg = h('div', { class: 'modal-bg no-print' + (opts.wide ? ' wide' : '') }, h('div', { class: 'modal' }, content));
+    const back = document.activeElement; // 閉じたら押した所に焦点を戻す
+    let dirty = false;
+    bg.addEventListener('input', () => { dirty = true; });
+    // Tab が窓の後ろへ抜けないように、末尾と先頭をつなぐ
+    bg.addEventListener('keydown', (e) => {
+      if (e.key !== 'Tab') return;
+      const f = focusables(bg);
+      if (!f.length) return;
+      const first = f[0], last = f[f.length - 1];
+      if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+      else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+    });
     document.body.appendChild(bg);
-    return function close() { bg.remove(); };
+    const entry = { bg: bg, esc: esc };
+    modalStack.push(entry);
+    function shut() {
+      const i = modalStack.indexOf(entry);
+      if (i < 0) return false; // すでに閉じている（二重に呼ばれても何もしない）
+      modalStack.splice(i, 1);
+      bg.remove();
+      if (back && document.contains(back) && back.focus) back.focus();
+      return true;
+    }
+    function esc() {
+      const ask = dirty && opts.askDiscard !== false;
+      if (!ask) { if (shut() && opts.onclose) opts.onclose(); return; }
+      U.confirm('入力したものを捨てて閉じます。', { okLabel: '捨てて閉じる', danger: true })
+        .then((yes) => { if (yes && shut() && opts.onclose) opts.onclose(); });
+    }
+    // 最初の欄に焦点を置く。欄が無い窓は押してほしいボタンへ
+    const want = typeof opts.focus === 'string' ? bg.querySelector(opts.focus) : opts.focus;
+    const f = focusables(bg);
+    const field = f.filter((el) => /^(INPUT|SELECT|TEXTAREA)$/.test(el.tagName) && el.type !== 'button')[0];
+    const target = want || field || bg.querySelector('.modal-btns .btn.primary') || f[0];
+    if (target && target.focus) target.focus();
+    return shut;
+  };
+  // Esc で一番手前の窓を閉じる。閉じる窓が無ければ false（keys.js から呼ぶ）
+  U.escapeTop = function () {
+    const top = modalStack[modalStack.length - 1];
+    if (!top) return false;
+    top.esc();
+    return true;
   };
   U.confirm = function (message, opts) {
     opts = opts || {};
     return new Promise((resolve) => {
       let close;
       const done = (v) => { close(); resolve(v); };
+      const cancel = h('button', { class: 'btn', onclick: () => done(false) }, opts.cancelLabel || 'やめる');
+      const ok = h('button', { class: 'btn ' + (opts.danger ? 'danger' : 'primary'), onclick: () => done(true) }, opts.okLabel || 'OK');
       close = U.modal(h('div', null,
         h('div', { class: 'modal-msg' }, message),
-        h('div', { class: 'modal-btns' },
-          h('button', { class: 'btn', onclick: () => done(false) }, opts.cancelLabel || 'やめる'),
-          h('button', { class: 'btn ' + (opts.danger ? 'danger' : 'primary'), onclick: () => done(true) }, opts.okLabel || 'OK'))));
+        h('div', { class: 'modal-btns' }, cancel, ok)),
+        // Esc は「やめる」と同じ扱い。消す確認では Enter で消えないよう「やめる」に焦点を置く
+        { onclose: () => resolve(false), focus: opts.danger ? cancel : ok });
     });
   };
 
